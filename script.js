@@ -1,3 +1,48 @@
+// Load live World Cup data from JSON file
+async function loadLiveData() {
+    try {
+        const response = await fetch('data/worldcup-data.json');
+        if (!response.ok) {
+            console.warn('Live data not available, using static data');
+            return null;
+        }
+        
+        const data = await response.json();
+        console.log('✅ Live data loaded:', data.lastUpdated);
+        console.log(`📊 ${data.matches.length} matches, ${Object.keys(data.groups).length} groups`);
+        
+        return data;
+    } catch (error) {
+        console.warn('Could not load live data:', error);
+        return null;
+    }
+}
+
+// Merge live match data with static data
+function mergeLiveMatches(liveData) {
+    if (!liveData || !liveData.matches) return;
+    
+    console.log('🔄 Merging live match data...');
+    let updatedCount = 0;
+    
+    liveData.matches.forEach(liveMatch => {
+        // Find matching match in static data
+        const staticMatch = matches.find(m => 
+            (m.team1 === liveMatch.team1 && m.team2 === liveMatch.team2) ||
+            m.matchNum === liveMatch.matchNum
+        );
+        
+        if (staticMatch && liveMatch.score1 !== null && liveMatch.score2 !== null) {
+            staticMatch.score1 = liveMatch.score1;
+            staticMatch.score2 = liveMatch.score2;
+            staticMatch.status = liveMatch.status;
+            updatedCount++;
+        }
+    });
+    
+    console.log(`✅ Updated ${updatedCount} matches with live scores`);
+}
+
 // Player data with their teams
 const players = {
     'Adam Mc': {
@@ -1000,12 +1045,34 @@ function manualRefresh() {
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load live data first
+    const liveData = await loadLiveData();
+    
+    // Merge live match data if available
+    if (liveData) {
+        mergeLiveMatches(liveData);
+    }
+    
+    // Render all components
     renderGroups();
     renderLeagueTable();
     renderThirdPlaceTeams();
     renderKnockoutBracket();
     renderFixtures();
+    
+    // Auto-refresh every 5 minutes
+    setInterval(async () => {
+        const newData = await loadLiveData();
+        if (newData) {
+            mergeLiveMatches(newData);
+            renderGroups();
+            renderLeagueTable();
+            renderThirdPlaceTeams();
+            renderKnockoutBracket();
+            console.log('🔄 Auto-refreshed at', new Date().toLocaleTimeString());
+        }
+    }, 5 * 60 * 1000); // 5 minutes
 });
 
 // Made with Bob

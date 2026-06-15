@@ -1,0 +1,59 @@
+name: Update World Cup Data
+
+on:
+  schedule:
+    # Run every 30 minutes during tournament
+    - cron: '*/30 * * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Fetch World Cup data
+        env:
+          API_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+        run: |
+          # Replace API key placeholder with actual key
+          sed -i "s/YOUR_API_KEY_HERE/$API_KEY/" scrape-worldcup.py
+          
+          # Run the scraper
+          python scrape-worldcup.py
+      
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code data/worldcup-data.json || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/worldcup-data.json
+          git commit -m "🔄 Update World Cup data [automated]"
+          git push
+      
+      - name: No changes
+        if: steps.git-check.outputs.changed != 'true'
+        run: echo "No changes to World Cup data"
+
+# Made with Bob

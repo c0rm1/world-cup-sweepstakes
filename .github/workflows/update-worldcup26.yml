@@ -1,0 +1,70 @@
+name: Update World Cup Data (worldcup26.ir - FREE!)
+
+on:
+  schedule:
+    # World Cup 2026 match times (North America time zones)
+    # Matches typically at: 12pm, 3pm, 6pm, 9pm ET (17:00, 20:00, 23:00, 02:00 UTC)
+    
+    # Run every 15 minutes during typical match windows
+    # 12pm-2pm ET (17:00-19:00 UTC)
+    - cron: '*/15 17-19 * * *'
+    
+    # 3pm-5pm ET (20:00-22:00 UTC)
+    - cron: '*/15 20-22 * * *'
+    
+    # 6pm-8pm ET (23:00-01:00 UTC)
+    - cron: '*/15 23 * * *'
+    - cron: '*/15 0-1 * * *'
+    
+    # 9pm-11pm ET (02:00-04:00 UTC)
+    - cron: '*/15 2-4 * * *'
+    
+    # Also run once per hour outside match times (for updates)
+    - cron: '0 5-16 * * *'
+  
+  # Allow manual trigger anytime
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      
+      - name: Fetch World Cup data (FREE - No API key!)
+        run: |
+          python scrape-worldcup26.py
+      
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code data/worldcup-data.json || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/worldcup-data.json
+          git commit -m "🔄 Update World Cup 2026 data [automated]"
+          git push
+      
+      - name: No changes
+        if: steps.git-check.outputs.changed != 'true'
+        run: echo "No changes to World Cup data"
+
+# Made with Bob

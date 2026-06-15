@@ -18,30 +18,9 @@ async function loadLiveData() {
     }
 }
 
-// Merge live match data with static data
-function mergeLiveMatches(liveData) {
-    if (!liveData || !liveData.matches) return;
-    
-    console.log('🔄 Merging live match data...');
-    let updatedCount = 0;
-    
-    liveData.matches.forEach(liveMatch => {
-        // Find matching match in static data
-        const staticMatch = matches.find(m => 
-            (m.team1 === liveMatch.team1 && m.team2 === liveMatch.team2) ||
-            m.matchNum === liveMatch.matchNum
-        );
-        
-        if (staticMatch && liveMatch.score1 !== null && liveMatch.score2 !== null) {
-            staticMatch.score1 = liveMatch.score1;
-            staticMatch.score2 = liveMatch.score2;
-            staticMatch.status = liveMatch.status;
-            updatedCount++;
-        }
-    });
-    
-    console.log(`✅ Updated ${updatedCount} matches with live scores`);
-}
+// Global data loaded from API
+let matches = [];
+let liveGroups = {};
 
 // Player data with their teams
 const players = {
@@ -1049,9 +1028,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load live data first
     const liveData = await loadLiveData();
     
-    // Merge live match data if available
+    // Use live data if available
     if (liveData) {
-        mergeLiveMatches(liveData);
+        matches = liveData.matches || [];
+        liveGroups = liveData.groups || {};
+        console.log('✅ Loaded data:', matches.length, 'matches');
     }
     
     // Render all components
@@ -1065,7 +1046,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(async () => {
         const newData = await loadLiveData();
         if (newData) {
-            mergeLiveMatches(newData);
+            matches = newData.matches || [];
+            liveGroups = newData.groups || {};
             renderGroups();
             renderLeagueTable();
             renderThirdPlaceTeams();

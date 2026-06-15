@@ -1,0 +1,51 @@
+name: Update Card Data
+
+on:
+  schedule:
+    # Run every 6 hours during the tournament (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '0 0,6,12,18 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  scrape-cards:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+      
+      - name: Scrape card data from Wikipedia
+        run: |
+          python scrape-wikipedia-cards.py
+      
+      - name: Enrich card data with team/match info
+        run: |
+          python enrich-card-data.py
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --quiet data/worldcup-cards-enriched.csv || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit and push if changed
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/worldcup-cards.csv data/worldcup-cards-enriched.csv
+          git commit -m "🟨 Auto-update: Card data scraped from Wikipedia"
+          git push
+
+# Made with Bob

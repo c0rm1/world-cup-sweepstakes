@@ -1,0 +1,37 @@
+match,date,team,player,card_type,minute
+MEX vs RSA,06/11/2026 13:00,MEX,César Montes,Red,90+2
+MEX vs RSA,06/11/2026 13:00,MEX,Brian Gutiérrez,Yellow,23
+MEX vs RSA,06/11/2026 13:00,RSA,Nkosinathi Sibisi,Yellow,74
+MEX vs RSA,06/11/2026 13:00,RSA,Sphephelo Sithole,Red,49
+MEX vs RSA,06/11/2026 13:00,RSA,Teboho Mokoena,Yellow,17
+MEX vs RSA,06/11/2026 13:00,RSA,Themba Zwane,Red,84
+KOR vs CZE,06/11/2026 20:00,KOR,Lee Gi-hyuk,Yellow,90+6
+CAN vs BIH,06/12/2026 15:00,CAN,Alistair Johnston,Yellow,11
+GER vs CUW,06/14/2026 12:00,CUW,Luc de Fougerolles,Yellow,53
+CAN vs BIH,06/12/2026 15:00,BIH,Nikola Katić,Yellow,90+3
+CAN vs BIH,06/12/2026 15:00,BIH,Ermedin Demirović,Yellow,44
+CAN vs BIH,06/12/2026 15:00,BIH,Jovo Lukić,Yellow,45+1
+QAT vs SUI,06/13/2026 12:00,QAT,Mahmud Abunada,Yellow,14
+QAT vs SUI,06/13/2026 12:00,QAT,Jassem Gaber,Yellow,23
+QAT vs SUI,06/13/2026 12:00,SUI,Denis Zakaria,Yellow,42
+BRA vs MAR,06/13/2026 18:00,BRA,Roger Ibañez,Yellow,43
+BRA vs MAR,06/13/2026 18:00,BRA,Casemiro,Yellow,37
+HAI vs SCO,06/13/2026 21:00,HAI,Jean-Ricner Bellegarde,Yellow,39
+HAI vs SCO,06/13/2026 21:00,SCO,Aaron Hickey,Yellow,46
+HAI vs SCO,06/13/2026 21:00,SCO,Kenny McLean,Yellow,90+5
+HAI vs SCO,06/13/2026 21:00,SCO,Findlay Curtis,Yellow,90+1
+USA vs PAR,06/12/2026 18:00,USA,Tyler Adams,Yellow,59
+USA vs PAR,06/12/2026 18:00,PAR,Juan José Cáceres,Yellow,9
+USA vs PAR,06/12/2026 18:00,PAR,Júnior Alonso,Yellow,90+3
+USA vs PAR,06/12/2026 18:00,PAR,Diego Gómez,Yellow,79
+USA vs PAR,06/12/2026 18:00,PAR,Miguel Almirón,Yellow,53
+USA vs PAR,06/12/2026 18:00,PAR,Álex Arce,Yellow,88
+AUS vs TUR,06/13/2026 21:00,TUR,Yunus Akgün,Yellow,86
+CIV vs ECU,06/14/2026 19:00,CIV,Guéla Doué,Yellow,40
+CIV vs ECU,06/14/2026 19:00,CIV,Franck Kessié,Yellow,38
+CIV vs ECU,06/14/2026 19:00,CIV,Seko Fofana,Yellow,28
+CIV vs ECU,06/14/2026 19:00,ECU,Jackson Porozo,Yellow,73
+NED vs JPN,06/14/2026 15:00,NED,Micky van de Ven,Yellow,90+1
+NED vs JPN,06/14/2026 15:00,NED,Crysencio Summerville,Yellow,61
+NED vs JPN,06/14/2026 15:00,NED,Memphis Depay,Yellow,83
+SWE vs TUN,06/14/2026 20:00,TUN,Rani Khedira,Yellow,54

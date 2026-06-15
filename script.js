@@ -252,8 +252,42 @@ function renderGroups() {
             ...teamStandings[team]
         }));
         
-        // Check if any team in this group has a live game (played > 0 but not all games completed)
-        const hasLiveGame = groupTeams.some(team => team.played > 0 && team.played < 3);
+        // Check if any match in this group is actually live RIGHT NOW
+        const hasLiveGame = matches.some(match => {
+            if (match.round !== 'group' || match.status !== 'LIVE') return false;
+            
+            // Check if any team from this group is in the match
+            const groupTeamCodes = groupTeams.map(t => t.team);
+            const matchInvolvesGroup = groupTeamCodes.includes(match.team1) || groupTeamCodes.includes(match.team2);
+            
+            if (!matchInvolvesGroup) return false;
+            
+            // Parse match date and check if it's currently happening
+            if (match.date) {
+                try {
+                    // Parse date format: "06/11/2026 13:00"
+                    const [datePart, timePart] = match.date.split(' ');
+                    const [month, day, year] = datePart.split('/');
+                    const [hours, minutes] = timePart.split(':');
+                    
+                    const kickoffTime = new Date(year, month - 1, day, hours, minutes);
+                    const now = new Date();
+                    
+                    // Match is live if:
+                    // - Kickoff time has passed
+                    // - Less than 2 hours have elapsed since kickoff (90 min + stoppage + halftime)
+                    const timeSinceKickoff = now - kickoffTime;
+                    const twoHours = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+                    
+                    return timeSinceKickoff >= 0 && timeSinceKickoff <= twoHours;
+                } catch (e) {
+                    console.warn('Could not parse match date:', match.date);
+                    return false;
+                }
+            }
+            
+            return false;
+        });
         
         return {
             name: groupName,

@@ -769,13 +769,51 @@ const accentColors = [
     '#FFD700', '#00FF7F', '#FF6347', '#BA55D3', '#00BFFF', '#FF69B4'
 ];
 
-// Mock knockout match data with scores, live status, completion, and penalties
-const knockoutMatchData = {
-    73: { score1: 2, score2: 1, isLive: false, isCompleted: true },
-    74: { score1: 3, score2: 3, penalties1: 4, penalties2: 5, isLive: false, isCompleted: true },
-    75: { score1: 1, score2: 1, isLive: true, isCompleted: false },
-    // Add more as needed
-};
+// Get knockout match data from loaded matches
+function getKnockoutMatchData() {
+    const knockoutData = {};
+    
+    // Process all knockout matches from the API
+    matches.forEach(match => {
+        if (match.round !== 'group' && match.matchNum) {
+            const matchNum = match.matchNum;
+            
+            // Check if match is actually live (kickoff to 2 hours after)
+            let isActuallyLive = false;
+            if (match.status === 'LIVE' && match.date) {
+                try {
+                    const [datePart, timePart] = match.date.split(' ');
+                    const [month, day, year] = datePart.split('/');
+                    const [hours, minutes] = timePart.split(':');
+                    
+                    const kickoffTime = new Date(year, month - 1, day, hours, minutes);
+                    const now = new Date();
+                    const timeSinceKickoff = now - kickoffTime;
+                    const twoHours = 2 * 60 * 60 * 1000;
+                    
+                    isActuallyLive = timeSinceKickoff >= 0 && timeSinceKickoff <= twoHours;
+                } catch (e) {
+                    console.warn('Could not parse knockout match date:', match.date);
+                }
+            }
+            
+            knockoutData[matchNum] = {
+                score1: match.score1,
+                score2: match.score2,
+                isLive: isActuallyLive,
+                isCompleted: match.status === 'FT',
+                // TODO: Add penalty data when available from API
+                penalties1: null,
+                penalties2: null
+            };
+        }
+    });
+    
+    return knockoutData;
+}
+
+// Get current knockout match data (will be refreshed when data loads)
+let knockoutMatchData = {};
 
 // Check if entire round is complete
 function isRoundComplete(roundId, matches) {
@@ -1107,6 +1145,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
+    // Refresh knockout match data from loaded matches
+    knockoutMatchData = getKnockoutMatchData();
+    
     // Render all components
     renderGroups();
     renderLeagueTable();
@@ -1121,6 +1162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             matches = newData.matches || [];
             liveGroups = newData.groups || {};
             teamStandings = calculateStandings();
+            knockoutMatchData = getKnockoutMatchData(); // Refresh knockout data
             renderGroups();
             renderLeagueTable();
             renderThirdPlaceTeams();

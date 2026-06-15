@@ -131,51 +131,74 @@ const groups = {
     'L': ['ENG', 'CRO', 'GHA', 'PAN'],
 };
 
-// Team standings (will be updated from API)
-let teamStandings = {};
-Object.keys(groups).forEach(group => {
-    groups[group].forEach((team, index) => {
-        teamStandings[team] = {
-            group: group,
-            played: 0,
-            won: 0,
-            drawn: 0,
-            lost: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            points: 0,
-            position: index + 1,
-            yellowCards: 0
-        };
+// Calculate team standings from match results
+function calculateStandings() {
+    const standings = {};
+    
+    // Initialize all teams with zero stats
+    Object.keys(groups).forEach(group => {
+        groups[group].forEach(team => {
+            standings[team] = {
+                group: group,
+                played: 0,
+                won: 0,
+                drawn: 0,
+                lost: 0,
+                goalsFor: 0,
+                goalsAgainst: 0,
+                points: 0,
+                yellowCards: 0
+            };
+        });
     });
-});
+    
+    // Process finished group stage matches
+    matches.forEach(match => {
+        if (match.round === 'group' && match.status === 'FT' &&
+            match.score1 !== null && match.score2 !== null) {
+            
+            const team1 = match.team1;
+            const team2 = match.team2;
+            
+            // Skip if teams not in standings (shouldn't happen)
+            if (!standings[team1] || !standings[team2]) return;
+            
+            // Update match counts
+            standings[team1].played++;
+            standings[team2].played++;
+            
+            // Update goals
+            standings[team1].goalsFor += match.score1;
+            standings[team1].goalsAgainst += match.score2;
+            standings[team2].goalsFor += match.score2;
+            standings[team2].goalsAgainst += match.score1;
+            
+            // Update results and points
+            if (match.score1 > match.score2) {
+                // Team1 wins
+                standings[team1].won++;
+                standings[team1].points += 3;
+                standings[team2].lost++;
+            } else if (match.score2 > match.score1) {
+                // Team2 wins
+                standings[team2].won++;
+                standings[team2].points += 3;
+                standings[team1].lost++;
+            } else {
+                // Draw
+                standings[team1].drawn++;
+                standings[team2].drawn++;
+                standings[team1].points++;
+                standings[team2].points++;
+            }
+        }
+    });
+    
+    return standings;
+}
 
-// Mock data: Group G live game
-teamStandings['JPN'].played = 2;
-teamStandings['JPN'].won = 2;
-teamStandings['JPN'].goalsFor = 5;
-teamStandings['JPN'].goalsAgainst = 1;
-teamStandings['JPN'].points = 6;
-
-teamStandings['KOR'].played = 2;
-teamStandings['KOR'].won = 1;
-teamStandings['KOR'].drawn = 1;
-teamStandings['KOR'].goalsFor = 3;
-teamStandings['KOR'].goalsAgainst = 2;
-teamStandings['KOR'].points = 4;
-
-teamStandings['AUS'].played = 2;
-teamStandings['AUS'].drawn = 1;
-teamStandings['AUS'].lost = 1;
-teamStandings['AUS'].goalsFor = 2;
-teamStandings['AUS'].goalsAgainst = 3;
-teamStandings['AUS'].points = 1;
-
-teamStandings['QAT'].played = 2;
-teamStandings['QAT'].lost = 2;
-teamStandings['QAT'].goalsFor = 1;
-teamStandings['QAT'].goalsAgainst = 5;
-teamStandings['QAT'].points = 0;
+// Team standings (calculated from matches)
+let teamStandings = {};
 
 // Statistics data
 let statistics = {
@@ -1034,6 +1057,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         liveGroups = liveData.groups || {};
         console.log('✅ Loaded data:', matches.length, 'matches');
         
+        // Calculate standings from match results
+        teamStandings = calculateStandings();
+        console.log('📊 Calculated standings for', Object.keys(teamStandings).length, 'teams');
+        
         // Update timestamp
         if (liveData.lastUpdated) {
             const date = new Date(liveData.lastUpdated);
@@ -1059,6 +1086,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newData) {
             matches = newData.matches || [];
             liveGroups = newData.groups || {};
+            teamStandings = calculateStandings();
             renderGroups();
             renderLeagueTable();
             renderThirdPlaceTeams();

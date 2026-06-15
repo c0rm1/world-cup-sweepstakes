@@ -18,9 +18,53 @@ async function loadLiveData() {
     }
 }
 
+// Load card data from CSV file
+async function loadCardData() {
+    try {
+        const response = await fetch('data/worldcup-cards-enriched.csv');
+        if (!response.ok) {
+            console.warn('Card data not available');
+            return {};
+        }
+        
+        const text = await response.text();
+        const lines = text.trim().split('\n');
+        const cardData = {};
+        
+        // Skip header row
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const parts = line.split(',');
+            if (parts.length < 5) continue;
+            
+            const team = parts[2];
+            const cardType = parts[4];
+            
+            if (!cardData[team]) {
+                cardData[team] = { yellow: 0, red: 0 };
+            }
+            
+            if (cardType === 'Yellow') {
+                cardData[team].yellow++;
+            } else if (cardType === 'Red' || cardType === 'Yellow-red') {
+                cardData[team].red++;
+            }
+        }
+        
+        console.log('✅ Card data loaded for', Object.keys(cardData).length, 'teams');
+        return cardData;
+    } catch (error) {
+        console.warn('Could not load card data:', error);
+        return {};
+    }
+}
+
 // Global data loaded from API
 let matches = [];
 let liveGroups = {};
+let cardData = {};
 
 // Player data with their teams
 const players = {
@@ -138,6 +182,7 @@ function calculateStandings() {
     // Initialize all teams with zero stats
     Object.keys(groups).forEach(group => {
         groups[group].forEach(team => {
+            const cards = cardData[team] || { yellow: 0, red: 0 };
             standings[team] = {
                 group: group,
                 played: 0,
@@ -147,7 +192,9 @@ function calculateStandings() {
                 goalsFor: 0,
                 goalsAgainst: 0,
                 points: 0,
-                yellowCards: 0
+                yellowCards: cards.yellow,
+                redCards: cards.red,
+                conductScore: 0  // Will be calculated: higher is better
             };
         });
     });
@@ -194,14 +241,108 @@ function calculateStandings() {
         }
     });
     
+    // Calculate conduct scores (higher is better, so negative points for cards)
+    // Yellow card = -1 point, Red card = -3 points
+    Object.keys(standings).forEach(team => {
+        standings[team].conductScore = -(standings[team].yellowCards + (standings[team].redCards * 3));
+    });
+    
     return standings;
 }
 
 // Team standings (calculated from matches)
 let teamStandings = {};
 
+// FIFA World Cup tie-breaking rules
+// Returns: negative if a should rank higher, positive if b should rank higher, 0 if equal
+function fifaTieBreaker(a, b, allTeamsInGroup) {
+    // Step 1: Points
+    if (b.points !== a.points) return b.points - a.points;
+    
+    // If only 2 teams are tied, apply head-to-head first
+    const tiedTeams = allTeamsInGroup.filter(t => t.points === a.points);
+    if (tiedTeams.length === 2) {
+        // Get head-to-head matches between these two teams
+        const h2hMatches = matches.filter(m => 
+            m.round === 'group' && m.status === 'FT' &&
+            ((m.team1 === a.team && m.team2 === b.team) || 
+             (m.team1 === b.team && m.team2 === a.team))
+        );
+        
+        if (h2hMatches.length > 0) {
+            let aH2HPoints = 0, bH2HPoints = 0;
+            let aH2HGF = 0, aH2HGA = 0, bH2HGF = 0, bH2HGA = 0;
+            
+            h2hMatches.forEach(m => {
+                if (m.team1 === a.team) {
+                    aH2HGF += m.score1;
+                    aH2HGA += m.score2;
+                    bH2HGF += m.score2;
+                    bH2HGA += m.score1;
+                    if (m.score1 > m.score2) aH2HPoints += 3;
+                    else if (m.score2 > m.score1) bH2HPoints += 3;
+                    else { aH2HPoints++; bH2HPoints++; }
+                } else {
+                    bH2HGF += m.score1;
+                    bH2HGA += m.score2;
+                    aH2HGF += m.score2;
+                    aH2HGA += m.score1;
+                    if (m.score1 > m.score2) bH2HPoints += 3;
+                    else if (m.score2 > m.score1) aH2HPoints += 3;
+                    else { aH2HPoints++; bH2HPoints++; }
+                }
+            });
+            
+            // Step 1a: Head-to-head points
+            if (bH2HPoints !== aH2HPoints) return bH2HPoints - aH2HPoints;
+            
+            // Step 1b: Head-to-head goal difference
+            const aH2HGD = aH2HGF - aH2HGA;
+            const bH2HGD = bH2HGF - bH2HGA;
+            if (bH2HGD !== aH2HGD) return bH2HGD - aH2HGD;
+            
+            // Step 1c: Head-to-head goals scored
+            if (bH2HGF !== aH2HGF) return bH2HGF - aH2HGF;
+        }
+    }
+    
+    // Step 2a: Overall goal difference
+    const gdA = a.goalsFor - a.goalsAgainst;
+    const gdB = b.goalsFor - b.goalsAgainst;
+    if (gdB !== gdA) return gdB - gdA;
+    
+    // Step 2b: Overall goals scored
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    
+    // Step 2c: Conduct score (higher is better, fewer cards)
+    if (b.conductScore !== a.conductScore) return b.conductScore - a.conductScore;
+    
+    // Step 3: FIFA ranking (we'll use alphabetical as proxy since we don't have real rankings)
+    return a.team.localeCompare(b.team);
+}
+
 // Statistics data
 let statistics = {
+// FIFA tie-breaking for third-place teams (no head-to-head since different groups)
+function thirdPlaceTieBreaker(a, b) {
+    // Step 1: Points
+    if (b.points !== a.points) return b.points - a.points;
+    
+    // Step 2: Goal difference
+    const gdA = a.goalsFor - a.goalsAgainst;
+    const gdB = b.goalsFor - b.goalsAgainst;
+    if (gdB !== gdA) return gdB - gdA;
+    
+    // Step 3: Goals scored
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    
+    // Step 4: Conduct score (higher is better, fewer cards)
+    if (b.conductScore !== a.conductScore) return b.conductScore - a.conductScore;
+    
+    // Step 5: FIFA ranking (alphabetical as proxy)
+    return a.team.localeCompare(b.team);
+}
+
     fastestGoals: [],
     fastestCards: [],
     mostConceded: [],
@@ -314,14 +455,8 @@ function renderGroups() {
             groupCard.classList.add('live-group');
         }
         
-        // Sort teams by points, then goal difference, then goals scored
-        groupData.teams.sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            const gdA = a.goalsFor - a.goalsAgainst;
-            const gdB = b.goalsFor - b.goalsAgainst;
-            if (gdB !== gdA) return gdB - gdA;
-            return b.goalsFor - a.goalsFor;
-        });
+        // Sort teams using FIFA tie-breaking rules
+        groupData.teams.sort((a, b) => fifaTieBreaker(a, b, groupData.teams));
         
         let tableHTML = `
             <h3>Group ${groupData.name}${groupData.isLive ? ' <span class="live-indicator">LIVE</span>' : ''}</h3>
@@ -339,6 +474,8 @@ function renderGroups() {
                         <th>GA</th>
                         <th>GD</th>
                         <th>Pts</th>
+                        <th title="Yellow Cards">YC</th>
+                        <th title="Red Cards">RC</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -361,6 +498,8 @@ function renderGroups() {
                     <td>${teamData.goalsAgainst}</td>
                     <td>${gdDisplay}</td>
                     <td><strong>${teamData.points}</strong></td>
+                    <td>${teamData.yellowCards || 0}</td>
+                    <td>${teamData.redCards || 0}</td>
                 </tr>
             `;
         });
@@ -553,30 +692,16 @@ function renderThirdPlaceTeams() {
             ...teamStandings[team]
         }));
         
-        // Sort to find third place
-        groupTeams.sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            const gdA = a.goalsFor - a.goalsAgainst;
-            const gdB = b.goalsFor - b.goalsAgainst;
-            if (gdB !== gdA) return gdB - gdA;
-            if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-            return a.yellowCards - b.yellowCards;
-        });
+        // Sort to find third place using FIFA rules
+        groupTeams.sort((a, b) => fifaTieBreaker(a, b, groupTeams));
         
         if (groupTeams[2]) {
             thirdPlaceTeams.push(groupTeams[2]);
         }
     });
     
-    // Sort third place teams with yellow cards as tiebreaker
-    thirdPlaceTeams.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        const gdA = a.goalsFor - a.goalsAgainst;
-        const gdB = b.goalsFor - b.goalsAgainst;
-        if (gdB !== gdA) return gdB - gdA;
-        if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
-        return a.yellowCards - b.yellowCards;
-    });
+    // Sort third place teams using FIFA rules for third-place ranking
+    thirdPlaceTeams.sort((a, b) => thirdPlaceTieBreaker(a, b));
     
     thirdPlaceTeams.forEach((teamData, index) => {
         const goalDiff = teamData.goalsFor - teamData.goalsAgainst;
@@ -747,14 +872,8 @@ function getQualifiedTeams() {
         }
     });
     
-    // Sort third place teams and take top 8
-    qualified.thirdPlace.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        const gdA = a.goalsFor - a.goalsAgainst;
-        const gdB = b.goalsFor - b.goalsAgainst;
-        if (gdB !== gdA) return gdB - gdA;
-        return b.goalsFor - a.goalsFor;
-    });
+    // Sort third place teams using FIFA rules and take top 8
+    qualified.thirdPlace.sort((a, b) => thirdPlaceTieBreaker(a, b));
     qualified.bestThirds = qualified.thirdPlace.slice(0, 8);
     
     return qualified;
@@ -1160,8 +1279,14 @@ function manualRefresh() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load live data first
-    const liveData = await loadLiveData();
+    // Load card data and live data in parallel
+    const [liveData, cards] = await Promise.all([
+        loadLiveData(),
+        loadCardData()
+    ]);
+    
+    // Store card data globally
+    cardData = cards;
     
     // Use live data if available
     if (liveData) {
@@ -1169,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         liveGroups = liveData.groups || {};
         console.log('✅ Loaded data:', matches.length, 'matches');
         
-        // Calculate standings from match results
+        // Calculate standings from match results (now includes card data)
         teamStandings = calculateStandings();
         console.log('📊 Calculated standings for', Object.keys(teamStandings).length, 'teams');
         
@@ -1197,10 +1322,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Auto-refresh every 5 minutes
     setInterval(async () => {
-        const newData = await loadLiveData();
+        const [newData, newCards] = await Promise.all([
+            loadLiveData(),
+            loadCardData()
+        ]);
         if (newData) {
             matches = newData.matches || [];
             liveGroups = newData.groups || {};
+            cardData = newCards;
             teamStandings = calculateStandings();
             knockoutMatchData = getKnockoutMatchData(); // Refresh knockout data
             renderGroups();

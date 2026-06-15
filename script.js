@@ -1041,8 +1041,8 @@ function renderRound(roundId, matches, isUpcoming = false, isComplete = false, n
         }
         
         // Build score display with penalties if applicable (only show penalties if they exist)
-        let score1Display = '';
-        let score2Display = '';
+        let score1Display = '-';
+        let score2Display = '-';
         
         if (score1 !== '') {
             if (penalties1 !== null && penalties1 !== undefined) {

@@ -505,15 +505,15 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .team-status-won {
-    color: #00FF00 !important; /* Green - Won last match */
+    color: #4CAF50 !important; /* Muted green - Won last match */
 }
 
 .team-status-lost {
-    color: #FF0000 !important; /* Red - Lost last match */
+    color: #E57373 !important; /* Muted red - Lost last match */
 }
 
 .team-status-drawn {
-    color: #CCCCCC !important; /* Light grey - Drew last match */
+    color: #999999 !important; /* Darker grey - Drew last match */
 }
 
 .team-status-not-played {
@@ -742,9 +742,12 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .knockout-round.completed-round .team-name,
-.knockout-round.completed-round .team-owner,
-.knockout-round.completed-round .team-score {
+.knockout-round.completed-round .team-owner {
     color: #666666;
+}
+
+.knockout-round.completed-round .team-score {
+    color: #FFFFFF !important; /* Keep score white */
 }
 
 /* Progressed match styling (winner has advanced to next round) */
@@ -757,9 +760,12 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .match.progressed-match .team-name,
-.match.progressed-match .team-owner,
-.match.progressed-match .team-score {
+.match.progressed-match .team-owner {
     color: #666666;
+}
+
+.match.progressed-match .team-score {
+    color: #FFFFFF !important; /* Keep score white */
 }
 
 /* Upcoming round highlight */

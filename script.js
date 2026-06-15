@@ -1,3 +1,19 @@
+// Load version info from version.json
+async function loadVersionInfo() {
+    try {
+        const response = await fetch('version.json');
+        if (!response.ok) {
+            return null;
+        }
+        const version = await response.json();
+        console.log('✅ Version loaded:', version.commit, '-', version.message);
+        return version;
+    } catch (error) {
+        console.warn('Could not load version info:', error);
+        return null;
+    }
+}
+
 // Load live World Cup data from JSON file
 async function loadLiveData() {
     try {
@@ -1279,14 +1295,29 @@ function manualRefresh() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load card data and live data in parallel
-    const [liveData, cards] = await Promise.all([
+    // Load version info, card data and live data in parallel
+    const [versionInfo, liveData, cards] = await Promise.all([
+        loadVersionInfo(),
         loadLiveData(),
         loadCardData()
     ]);
     
     // Store card data globally
     cardData = cards;
+    
+    // Display version info
+    if (versionInfo) {
+        const date = new Date(versionInfo.date);
+        const timeStr = date.toLocaleString('en-IE', {
+            timeZone: 'Europe/Dublin',
+            dateStyle: 'short',
+            timeStyle: 'short'
+        });
+        document.getElementById('lastUpdated').innerHTML = `
+            <strong>Latest Update:</strong> ${versionInfo.message}<br>
+            <span style="font-size: 11px; opacity: 0.8;">Commit ${versionInfo.commit} • ${timeStr}</span>
+        `;
+    }
     
     // Use live data if available
     if (liveData) {
@@ -1297,17 +1328,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Calculate standings from match results (now includes card data)
         teamStandings = calculateStandings();
         console.log('📊 Calculated standings for', Object.keys(teamStandings).length, 'teams');
-        
-        // Update timestamp
-        if (liveData.lastUpdated) {
-            const date = new Date(liveData.lastUpdated);
-            const timeStr = date.toLocaleString('en-IE', {
-                timeZone: 'Europe/Dublin',
-                dateStyle: 'short',
-                timeStyle: 'short'
-            });
-            document.getElementById('lastUpdated').textContent = `Data last updated: ${timeStr}`;
-        }
     }
     
     // Refresh knockout match data from loaded matches

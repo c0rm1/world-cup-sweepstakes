@@ -648,17 +648,57 @@ function renderLeagueTable() {
     sortedPlayers.forEach(([player, data], index) => {
         const row = document.createElement('tr');
         
-        // Create individual team cells with elimination check
-        const teamCells = data.teams.map(team => {
+        // Helper function to get team status and color
+        const getTeamStatus = (team) => {
             const standing = teamStandings[team];
-            // Check if team is eliminated (finished group stage and not in top 3)
-            const isEliminated = standing && standing.played >= 3 && standing.position > 3;
-            const teamClass = isEliminated ? 'class="eliminated-team"' : '';
-            return `<td ${teamClass}>${team}</td>`;
+            if (!standing) return { status: 'not-played', display: team };
+            
+            // Check if eliminated (finished group stage and not in top 3)
+            if (standing.played >= 3 && standing.position > 3) {
+                return { status: 'eliminated', display: '-' };
+            }
+            
+            // Check if not played yet
+            if (standing.played === 0) {
+                return { status: 'not-played', display: team };
+            }
+            
+            // Find team's most recent match to determine won/lost
+            const teamMatches = matches.filter(m =>
+                (m.team1 === team || m.team2 === team) &&
+                m.status === 'FT' &&
+                m.score1 !== null && m.score2 !== null
+            ).sort((a, b) => {
+                // Sort by match number descending to get most recent
+                return (b.matchNum || 0) - (a.matchNum || 0);
+            });
+            
+            if (teamMatches.length > 0) {
+                const lastMatch = teamMatches[0];
+                const isTeam1 = lastMatch.team1 === team;
+                const teamScore = isTeam1 ? lastMatch.score1 : lastMatch.score2;
+                const opponentScore = isTeam1 ? lastMatch.score2 : lastMatch.score1;
+                
+                if (teamScore > opponentScore) {
+                    return { status: 'won', display: team };
+                } else if (teamScore < opponentScore) {
+                    return { status: 'lost', display: team };
+                } else {
+                    return { status: 'drawn', display: team };
+                }
+            }
+            
+            return { status: 'not-played', display: team };
+        };
+        
+        // Create individual team cells with status-based styling
+        const teamCells = data.teams.map(team => {
+            const { status, display } = getTeamStatus(team);
+            return `<td class="team-status-${status} world-cup-font">${display}</td>`;
         }).join('');
         
         // Pad with empty cells if player has fewer than 4 teams
-        const emptyTeamCells = '<td>-</td>'.repeat(4 - data.teams.length);
+        const emptyTeamCells = '<td class="team-status-eliminated world-cup-font">-</td>'.repeat(4 - data.teams.length);
         
         row.innerHTML = `
             <td><strong>${index + 1}</strong></td>

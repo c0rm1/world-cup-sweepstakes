@@ -1,1 +1,1 @@
-{"commit": "3666c33", "message": "Fix knockout scores showing null instead of dash", "date": "2026-06-15 16:22:24 +0100"}
+{"commit": "48332b2", "message": "Fix syntax error - move thirdPlaceTieBreaker function outside statistics object", "date": "2026-06-15 16:31:26 +0100"}

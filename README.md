@@ -1,130 +1,99 @@
 # World Cup 2026 Sweepstakes Tracker
 
-A real-time World Cup sweepstakes tracking website with live group standings, league tables, knockout brackets, and statistics.
+Live sweepstakes tracker for FIFA World Cup 2026 with real-time scores, group standings, and knockout bracket.
+
+🌐 **Live Site**: https://c0rm1.github.io/world-cup-sweepstakes/
 
 ## Features
 
-- **Live Group Standings**: Automatically updates every 60 seconds from World Cup API
-- **League Table**: Track player points based on team performance (3 points for win, 1 for draw)
-- **Knockout Bracket**: Projected matchups based on current group standings
-- **Statistics**: Track fastest goals, fastest cards, most goals conceded, and card totals
+- ✅ **Live Scores**: Real-time match results from worldcup26.ir API
+- ✅ **Group Standings**: Automatic calculation of points, goal difference, and rankings
+- ✅ **Knockout Bracket**: Dynamic bracket that updates as teams advance
+- ✅ **Player Tracking**: See which teams each player owns
+- ✅ **Smart Updates**: Data refreshes every 5 minutes during match times only
+- ✅ **100% Free**: No API keys or authentication required
+
+## How It Works
+
+### Data Source
+- **API**: [worldcup26.ir](https://worldcup26.ir) - Free, no authentication
+- **Coverage**: All 104 World Cup 2026 matches
+- **Updates**: Automated via GitHub Actions during match times
+
+### Automation
+- **Smart Scheduling**: Updates every 5 minutes from kickoff until 2 hours after each match
+- **Workflow**: `.github/workflows/update-worldcup26-smart.yml`
+- **Data Storage**: `data/worldcup-data.json`
+
+### Technology Stack
+- **Frontend**: HTML, CSS, JavaScript (vanilla)
+- **Backend**: Python scraper (`scrape-worldcup26.py`)
+- **Hosting**: GitHub Pages
+- **CI/CD**: GitHub Actions
+
+## Project Structure
+
+```
+├── index.html              # Main page
+├── styles.css              # Styling
+├── script.js               # Frontend logic
+├── scrape-worldcup26.py    # Data scraper
+├── data/
+│   └── worldcup-data.json  # Live match data
+├── .github/workflows/
+│   └── update-worldcup26-smart.yml  # Automation
+└── worldcup2026-*.json     # Reference data
+```
 
 ## Setup
 
-1. Open `index.html` in a web browser
-2. The site will automatically attempt to fetch live data from the World Cup API
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/c0rm1/world-cup-sweepstakes.git
+   cd world-cup-sweepstakes
+   ```
 
-## API Configuration
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-The site is configured to use the World Cup JSON API. To customize the data source:
+3. **Run the scraper manually** (optional)
+   ```bash
+   python3 scrape-worldcup26.py
+   ```
 
-1. Open `script.js`
-2. Find the `API_CONFIG` object (around line 75)
-3. Update the `baseUrl` to your preferred API endpoint
-4. Adjust `updateInterval` to change refresh frequency (in milliseconds)
+4. **View locally**
+   - Open `index.html` in a browser
+   - Or use a local server: `python3 -m http.server 8000`
 
-### Supported APIs
+## Data Files
 
-The site works with any API that returns match data in the following format:
+- `worldcup2026-schedule.json` - Complete match schedule (104 matches)
+- `worldcup2026-teams.json` - All 48 teams with FIFA codes and groups
+- `worldcup2026-complete.json` - Combined data with fixtures and groups
+- `data/worldcup-data.json` - Live data updated by GitHub Actions
 
-```json
-[
-  {
-    "status": "completed",
-    "home_team": {
-      "name": "Brazil",
-      "goals": 2
-    },
-    "away_team": {
-      "name": "Argentina", 
-      "goals": 1
-    }
-  }
-]
-```
+## Scripts
 
-### Popular World Cup APIs
+- `scrape-worldcup26.py` - Main scraper for live data
+- `build-correct-groups.py` - Generate group assignments from API
+- `generate-smart-schedule.py` - Create optimized update schedule
 
-- **World Cup JSON**: `https://worldcupjson.net/matches`
-- **FIFA Official API**: Contact FIFA for access
-- **Custom API**: You can create your own API endpoint
+## Contributing
 
-## Manual Data Entry
-
-If no API is available, the site will use mock data. You can manually update team standings by:
-
-1. Opening the browser console (F12)
-2. Modifying the `teamStandings` object
-3. Calling `renderGroups()` to refresh the display
-
-Example:
-```javascript
-teamStandings['BRA'].played = 3;
-teamStandings['BRA'].won = 2;
-teamStandings['BRA'].drawn = 1;
-teamStandings['BRA'].points = 7;
-renderGroups();
-```
-
-## Player Teams
-
-| Player | Teams |
-|--------|-------|
-| Adam Mc | POR, PAR, NOR, HAI |
-| Darragh | BRA, CIV, ALG, IRN |
-| Simon | GER, PAN, RSA, QAT |
-| Ben | MEX, KSA, SCO, AUT |
-| Josie | FRA, JPN, UZB, ARG |
-| Cormac | BEL, COL, EGY, NED |
-| Cole | ENG, ECU, TUN, NZL |
-| Liam | ESP, CRO, GHA, JOR |
-| Willie | CAN, KOR, CUW, CPV |
-| Danny | USA, URU, COD, SWE |
-| Laura | AUS, SEN, TUR, CZE |
-| Adam K | SUI, MAR, IRQ, BIH |
-
-## Troubleshooting
-
-### Data Not Updating
-
-1. Check browser console for API errors
-2. Verify API endpoint is accessible
-3. Check CORS settings if using external API
-4. Use the "Refresh Now" button to manually trigger an update
-
-### CORS Issues
-
-If you encounter CORS errors when accessing external APIs:
-
-1. Use a CORS proxy service
-2. Host the API on the same domain
-3. Configure the API server to allow CORS requests
-4. Use a browser extension to disable CORS (development only)
-
-## Customization
-
-### Change Update Frequency
-
-Edit `API_CONFIG.updateInterval` in `script.js`:
-```javascript
-updateInterval: 30000 // Update every 30 seconds
-```
-
-### Add More Statistics
-
-Extend the `statistics` object in `script.js` to track additional metrics.
-
-### Modify Styling
-
-Edit `styles.css` to customize colors, fonts, and layout.
-
-## Browser Compatibility
-
-- Chrome/Edge: ✅ Full support
-- Firefox: ✅ Full support  
-- Safari: ✅ Full support
-- Mobile browsers: ✅ Responsive design
+This is a personal project, but feel free to fork and adapt for your own sweepstakes!
 
 ## License
 
-Free to use for personal sweepstakes tracking.
+See `license.txt` for details.
+
+## Credits
+
+- **API**: [worldcup26.ir](https://worldcup26.ir) - Free World Cup 2026 data
+- **Font**: FIFA 26 OTF
+- **Built with**: Bob (AI coding assistant)
+
+---
+
+Made for World Cup 2026 🏆

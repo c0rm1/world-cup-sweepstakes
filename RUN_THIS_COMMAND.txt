@@ -1,0 +1,36 @@
+========================================
+  FINAL STEP - Run This in Terminal
+========================================
+
+Everything is ready! Just run this ONE command:
+
+cd /Users/cormac/sweepstakes && git push -u origin main
+
+When prompted:
+- Username: c0rm1
+- Password: Your GitHub password (or Personal Access Token)
+
+========================================
+
+After the push succeeds:
+
+1. Go to: https://github.com/c0rm1/world-cup-sweepstakes/settings/pages
+
+2. Under "Source", select "main" branch
+
+3. Click "Save"
+
+4. Wait 1-2 minutes
+
+5. Your site will be live at:
+   https://c0rm1.github.io/world-cup-sweepstakes/
+
+========================================
+
+If you need a Personal Access Token:
+1. Go to: https://github.com/settings/tokens
+2. Generate new token (classic)
+3. Check "repo" scope
+4. Use token as password
+
+========================================

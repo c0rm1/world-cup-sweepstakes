@@ -38,6 +38,59 @@ const players = {
     }
 };
 
+// Flag colors for each country (vibrant/saturated versions)
+const flagColors = {
+    'USA': ['#FF0033', '#FFFFFF', '#0055FF'],
+    'MEX': ['#00AA55', '#FFFFFF', '#FF1133'],
+    'CAN': ['#FF0000', '#FFFFFF'],
+    'CPV': ['#0055FF', '#FFFFFF', '#FF2244', '#FFD700'],
+    'BRA': ['#00DD44', '#FFEE00', '#0044FF'],
+    'ARG': ['#55CCFF', '#FFFFFF', '#FFCC00'],
+    'URU': ['#0055FF', '#FFFFFF', '#FFDD00'],
+    'COL': ['#FFDD00', '#0055FF', '#FF1133'],
+    'GER': ['#000000', '#FF0000', '#FFDD00'],
+    'ESP': ['#FF0033', '#FFCC00'],
+    'NED': ['#0055FF', '#FFFFFF', '#FF1133'],
+    'SUI': ['#FF0000', '#FFFFFF'],
+    'FRA': ['#0066FF', '#FFFFFF', '#FF3344'],
+    'ENG': ['#FFFFFF', '#FF0033'],
+    'BEL': ['#000000', '#FFDD00', '#FF3344'],
+    'POR': ['#00AA33', '#FF0000'],
+    'CRO': ['#FF0000', '#FFFFFF', '#0044FF'],
+    'SWE': ['#0088FF', '#FFDD00'],
+    'ALG': ['#00AA44', '#FFFFFF', '#FF1133'],
+    'SEN': ['#00BB44', '#FFEE00', '#FF2233'],
+    'MAR': ['#FF1133', '#00AA44'],
+    'EGY': ['#FF1133', '#FFFFFF', '#000000'],
+    'TUN': ['#FF0033', '#FFFFFF'],
+    'IRN': ['#33DD55', '#FFFFFF', '#FF0033'],
+    'JPN': ['#FF0033', '#FFFFFF'],
+    'KOR': ['#0055FF', '#FF3344', '#FFFFFF'],
+    'AUS': ['#0033FF', '#FFFFFF', '#FF0000'],
+    'QAT': ['#AA1155', '#FFFFFF'],
+    'CIV': ['#FF8800', '#FFFFFF', '#00CC66'],
+    'GHA': ['#00AA44', '#FFDD00', '#FF1133'],
+    'COD': ['#00AAFF', '#FFDD00', '#FF1133'],
+    'RSA': ['#00AA55', '#FFCC00', '#FF3344', '#0044FF'],
+    'PAR': ['#FF1133', '#FFFFFF', '#0055FF'],
+    'NOR': ['#FF0033', '#0044FF', '#FFFFFF'],
+    'HAI': ['#0044FF', '#FF1133'],
+    'PAN': ['#FF1133', '#FFFFFF', '#0066FF'],
+    'KSA': ['#00AA44', '#FFFFFF'],
+    'SCO': ['#0088FF', '#FFFFFF'],
+    'AUT': ['#FF1133', '#FFFFFF'],
+    'UZB': ['#00BBFF', '#FFFFFF', '#22DD44', '#FF1133'],
+    'ECU': ['#FFDD00', '#0055FF', '#FF1133'],
+    'NZL': ['#0044FF', '#FFFFFF', '#FF0033'],
+    'JOR': ['#000000', '#FFFFFF', '#00AA44', '#FF1133'],
+    'CUW': ['#0044FF', '#FFEE00', '#FFFFFF'],
+    'TUR': ['#FF0033', '#FFFFFF'],
+    'CZE': ['#0055FF', '#FFFFFF', '#FF1133'],
+    'IRQ': ['#FF1133', '#FFFFFF', '#00AA44'],
+    'BIH': ['#0044FF', '#FFDD00', '#FFFFFF'],
+    'TBD': ['#888888', '#BBBBBB']
+};
+
 // Group assignments (World Cup 2026 format - 12 groups of 4)
 const groups = {
     'A': ['USA', 'MEX', 'CAN', 'CPV'],
@@ -67,189 +120,38 @@ Object.keys(groups).forEach(group => {
             goalsFor: 0,
             goalsAgainst: 0,
             points: 0,
-            position: index + 1
+            position: index + 1,
+            yellowCards: 0
         };
     });
 });
 
-// API Configuration
-const API_CONFIG = {
-    // Using FIFA World Cup API (you can replace with actual API when available)
-    baseUrl: 'https://worldcupjson.net/matches',
-    updateInterval: 60000 // Update every 60 seconds
-};
+// Mock data: Group G live game
+teamStandings['JPN'].played = 2;
+teamStandings['JPN'].won = 2;
+teamStandings['JPN'].goalsFor = 5;
+teamStandings['JPN'].goalsAgainst = 1;
+teamStandings['JPN'].points = 6;
 
-// Fetch real-time standings
-async function fetchRealTimeStandings() {
-    try {
-        const response = await fetch(API_CONFIG.baseUrl);
-        if (!response.ok) {
-            throw new Error('API request failed');
-        }
-        const data = await response.json();
-        updateStandingsFromAPI(data);
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-    } catch (error) {
-        console.log('Using mock data - API not available:', error.message);
-        document.getElementById('lastUpdate').textContent = 'Using mock data';
-    }
-}
+teamStandings['KOR'].played = 2;
+teamStandings['KOR'].won = 1;
+teamStandings['KOR'].drawn = 1;
+teamStandings['KOR'].goalsFor = 3;
+teamStandings['KOR'].goalsAgainst = 2;
+teamStandings['KOR'].points = 4;
 
-// Update standings from API data
-function updateStandingsFromAPI(matches) {
-    // Reset standings
-    Object.keys(teamStandings).forEach(team => {
-        teamStandings[team].played = 0;
-        teamStandings[team].won = 0;
-        teamStandings[team].drawn = 0;
-        teamStandings[team].lost = 0;
-        teamStandings[team].goalsFor = 0;
-        teamStandings[team].goalsAgainst = 0;
-        teamStandings[team].points = 0;
-    });
+teamStandings['AUS'].played = 2;
+teamStandings['AUS'].drawn = 1;
+teamStandings['AUS'].lost = 1;
+teamStandings['AUS'].goalsFor = 2;
+teamStandings['AUS'].goalsAgainst = 3;
+teamStandings['AUS'].points = 1;
 
-    // Process matches
-    matches.forEach(match => {
-        if (match.status === 'completed') {
-            const homeTeam = getTeamCode(match.home_team.name);
-            const awayTeam = getTeamCode(match.away_team.name);
-            
-            if (teamStandings[homeTeam] && teamStandings[awayTeam]) {
-                const homeGoals = match.home_team.goals;
-                const awayGoals = match.away_team.goals;
-                
-                // Update home team
-                teamStandings[homeTeam].played++;
-                teamStandings[homeTeam].goalsFor += homeGoals;
-                teamStandings[homeTeam].goalsAgainst += awayGoals;
-                
-                // Update away team
-                teamStandings[awayTeam].played++;
-                teamStandings[awayTeam].goalsFor += awayGoals;
-                teamStandings[awayTeam].goalsAgainst += homeGoals;
-                
-                // Determine result
-                if (homeGoals > awayGoals) {
-                    teamStandings[homeTeam].won++;
-                    teamStandings[homeTeam].points += 3;
-                    teamStandings[awayTeam].lost++;
-                } else if (awayGoals > homeGoals) {
-                    teamStandings[awayTeam].won++;
-                    teamStandings[awayTeam].points += 3;
-                    teamStandings[homeTeam].lost++;
-                } else {
-                    teamStandings[homeTeam].drawn++;
-                    teamStandings[awayTeam].drawn++;
-                    teamStandings[homeTeam].points++;
-                    teamStandings[awayTeam].points++;
-                }
-            }
-        }
-    });
-    
-    // Update positions within groups
-    updateGroupPositions();
-    
-    // Refresh displays
-    renderGroups();
-    renderLeagueTable();
-    renderThirdPlaceTeams();
-}
-
-// Update positions within each group
-function updateGroupPositions() {
-    Object.keys(groups).forEach(groupName => {
-        const groupTeams = groups[groupName].map(team => ({
-            team: team,
-            ...teamStandings[team]
-        }));
-        
-        // Sort by points, then goal difference, then goals scored
-        groupTeams.sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            const gdA = a.goalsFor - a.goalsAgainst;
-            const gdB = b.goalsFor - b.goalsAgainst;
-            if (gdB !== gdA) return gdB - gdA;
-            return b.goalsFor - a.goalsFor;
-        });
-        
-        // Update positions
-        groupTeams.forEach((team, index) => {
-            teamStandings[team.team].position = index + 1;
-        });
-    });
-}
-
-// Convert full team name to code (helper for API integration)
-function getTeamCode(fullName) {
-    const nameMap = {
-        'United States': 'USA',
-        'Mexico': 'MEX',
-        'Canada': 'CAN',
-        'Cape Verde': 'CPV',
-        'Brazil': 'BRA',
-        'Argentina': 'ARG',
-        'Uruguay': 'URU',
-        'Colombia': 'COL',
-        'Germany': 'GER',
-        'Spain': 'ESP',
-        'Netherlands': 'NED',
-        'Switzerland': 'SUI',
-        'France': 'FRA',
-        'England': 'ENG',
-        'Belgium': 'BEL',
-        'Portugal': 'POR',
-        'Croatia': 'CRO',
-        'Sweden': 'SWE',
-        'Algeria': 'ALG',
-        'Senegal': 'SEN',
-        'Morocco': 'MAR',
-        'Egypt': 'EGY',
-        'Tunisia': 'TUN',
-        'Iran': 'IRN',
-        'Japan': 'JPN',
-        'South Korea': 'KOR',
-        'Australia': 'AUS',
-        'Qatar': 'QAT',
-        'Côte d\'Ivoire': 'CIV',
-        'Ghana': 'GHA',
-        'DR Congo': 'COD',
-        'South Africa': 'RSA',
-        'Saudi Arabia': 'KSA',
-        'Iraq': 'IRQ',
-        'Uzbekistan': 'UZB',
-        'Jordan': 'JOR',
-        'Türkiye': 'TUR',
-        'Turkey': 'TUR',
-        'Scotland': 'SCO',
-        'Norway': 'NOR',
-        'Austria': 'AUT',
-        'Ecuador': 'ECU',
-        'Paraguay': 'PAR',
-        'Panama': 'PAN',
-        'Bosnia': 'BIH',
-        'Bosnia and Herzegovina': 'BIH',
-        'New Zealand': 'NZL',
-        'Curaçao': 'CUW',
-        'Haiti': 'HAI',
-        'Czechia': 'CZE',
-        'Czech Republic': 'CZE'
-    };
-    return nameMap[fullName] || fullName;
-}
-
-// Start auto-refresh
-let refreshInterval;
-function startAutoRefresh() {
-    fetchRealTimeStandings();
-    refreshInterval = setInterval(fetchRealTimeStandings, API_CONFIG.updateInterval);
-}
-
-function stopAutoRefresh() {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-    }
-}
+teamStandings['QAT'].played = 2;
+teamStandings['QAT'].lost = 2;
+teamStandings['QAT'].goalsFor = 1;
+teamStandings['QAT'].goalsAgainst = 5;
+teamStandings['QAT'].points = 0;
 
 // Statistics data
 let statistics = {
@@ -279,53 +181,346 @@ function showPage(pageName) {
     const pages = document.querySelectorAll('.page');
     pages.forEach(page => page.classList.remove('active'));
     
-    const buttons = document.querySelectorAll('.nav-btn');
+    const buttons = document.querySelectorAll('.nav-item');
     buttons.forEach(btn => btn.classList.remove('active'));
     
     document.getElementById(`${pageName}-page`).classList.add('active');
-    event.target.classList.add('active');
+    event.target.closest('.nav-item').classList.add('active');
     
     if (pageName === 'knockout') {
         renderKnockoutBracket();
     }
 }
 
-// Render groups
+// Render all groups
 function renderGroups() {
-    Object.keys(groups).forEach(groupName => {
-        const tbody = document.getElementById(`group${groupName}`);
-        tbody.innerHTML = '';
+    const container = document.getElementById('groupsGrid');
+    container.innerHTML = '';
+    
+    // Create array of group data with live status
+    const groupsArray = Object.keys(groups).map(groupName => {
+        const groupTeams = groups[groupName].map(team => ({
+            team: team,
+            owner: findOwner(team),
+            ...teamStandings[team]
+        }));
         
-        groups[groupName].forEach(team => {
-            const owner = findOwner(team);
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${team}</td>
-                <td>${owner}</td>
-            `;
-            tbody.appendChild(row);
-        });
+        // Check if any team in this group has a live game (played > 0 but not all games completed)
+        const hasLiveGame = groupTeams.some(team => team.played > 0 && team.played < 3);
+        
+        return {
+            name: groupName,
+            teams: groupTeams,
+            isLive: hasLiveGame
+        };
     });
     
-    renderThirdPlaceTeams();
+    // Sort groups: live groups first, then alphabetically
+    groupsArray.sort((a, b) => {
+        if (a.isLive && !b.isLive) return -1;
+        if (!a.isLive && b.isLive) return 1;
+        return a.name.localeCompare(b.name);
+    });
+    
+    // Render each group
+    groupsArray.forEach(groupData => {
+        const groupCard = document.createElement('div');
+        groupCard.className = 'group-card';
+        groupCard.dataset.group = groupData.name;
+        
+        // Add live class if group has live games
+        if (groupData.isLive) {
+            groupCard.classList.add('live-group');
+        }
+        
+        // Sort teams by points, then goal difference, then goals scored
+        groupData.teams.sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            const gdA = a.goalsFor - a.goalsAgainst;
+            const gdB = b.goalsFor - b.goalsAgainst;
+            if (gdB !== gdA) return gdB - gdA;
+            return b.goalsFor - a.goalsFor;
+        });
+        
+        let tableHTML = `
+            <h3>Group ${groupData.name}${groupData.isLive ? ' <span class="live-indicator">LIVE</span>' : ''}</h3>
+            <table class="group-table">
+                <thead>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Team</th>
+                        <th>Owner</th>
+                        <th>P</th>
+                        <th>W</th>
+                        <th>D</th>
+                        <th>L</th>
+                        <th>GF</th>
+                        <th>GA</th>
+                        <th>GD</th>
+                        <th>Pts</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        groupData.teams.forEach((teamData, index) => {
+            const goalDiff = teamData.goalsFor - teamData.goalsAgainst;
+            const gdDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
+            
+            tableHTML += `
+                <tr data-owner="${teamData.owner}">
+                    <td><strong>${index + 1}</strong></td>
+                    <td><strong>${teamData.team}</strong></td>
+                    <td>${teamData.owner}</td>
+                    <td>${teamData.played}</td>
+                    <td>${teamData.won}</td>
+                    <td>${teamData.drawn}</td>
+                    <td>${teamData.lost}</td>
+                    <td>${teamData.goalsFor}</td>
+                    <td>${teamData.goalsAgainst}</td>
+                    <td>${gdDisplay}</td>
+                    <td><strong>${teamData.points}</strong></td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        groupCard.innerHTML = tableHTML;
+        container.appendChild(groupCard);
+    });
 }
+
+// Current selected player for filtering
+let selectedPlayer = 'all';
+
+// Handle player search input
+function handlePlayerSearch() {
+    const searchInput = document.getElementById('playerSearch');
+    const dropdown = document.getElementById('playerDropdown');
+    const clearBtn = document.getElementById('clearSearch');
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    
+    if (searchTerm === '') {
+        dropdown.classList.remove('show');
+        dropdown.innerHTML = '';
+        return;
+    }
+    
+    // Filter players based on search term
+    const matchingPlayers = Object.keys(players).filter(player =>
+        player.toLowerCase().includes(searchTerm)
+    );
+    
+    if (matchingPlayers.length > 0) {
+        dropdown.innerHTML = matchingPlayers.map(player =>
+            `<div class="player-option" onclick="selectPlayer('${player}')">${player}</div>`
+        ).join('');
+        dropdown.classList.add('show');
+    } else {
+        dropdown.innerHTML = '<div class="player-option" style="color: #666666;">No players found</div>';
+        dropdown.classList.add('show');
+    }
+}
+
+// Select a player from dropdown
+function selectPlayer(player) {
+    const searchInput = document.getElementById('playerSearch');
+    const dropdown = document.getElementById('playerDropdown');
+    const clearBtn = document.getElementById('clearSearch');
+    
+    searchInput.value = player;
+    selectedPlayer = player;
+    dropdown.classList.remove('show');
+    dropdown.innerHTML = '';
+    clearBtn.style.display = 'flex';
+    
+    filterGroups();
+}
+
+// Clear player search
+function clearPlayerSearch() {
+    const searchInput = document.getElementById('playerSearch');
+    const dropdown = document.getElementById('playerDropdown');
+    const clearBtn = document.getElementById('clearSearch');
+    
+    searchInput.value = '';
+    selectedPlayer = 'all';
+    dropdown.classList.remove('show');
+    dropdown.innerHTML = '';
+    clearBtn.style.display = 'none';
+    
+    filterGroups();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const searchContainer = document.querySelector('.search-container');
+    const dropdown = document.getElementById('playerDropdown');
+    
+    if (searchContainer && !searchContainer.contains(event.target)) {
+        dropdown.classList.remove('show');
+        dropdown.innerHTML = '';
+    }
+});
+
+// Filter groups
+function filterGroups() {
+    const ownerFilter = selectedPlayer;
+    
+    // Filter group cards
+    const groupCards = document.querySelectorAll('.group-card');
+    groupCards.forEach(card => {
+        let showCard = true;
+        
+        // Filter by owner - show entire group if any team belongs to the owner
+        if (ownerFilter !== 'all') {
+            const rows = card.querySelectorAll('tbody tr');
+            let hasOwner = false;
+            rows.forEach(row => {
+                if (row.dataset.owner === ownerFilter) {
+                    hasOwner = true;
+                }
+                // Always show all rows in the group
+                row.style.display = '';
+            });
+            // Only hide the entire group if the owner has no teams in it
+            if (!hasOwner) showCard = false;
+        } else {
+            // Show all rows if no owner filter
+            const rows = card.querySelectorAll('tbody tr');
+            rows.forEach(row => row.style.display = '');
+        }
+        
+        card.style.display = showCard ? 'block' : 'none';
+    });
+    
+    // Filter third place table
+    const thirdPlaceRows = document.querySelectorAll('#thirdPlaceTeams tr');
+    thirdPlaceRows.forEach(row => {
+        let showRow = true;
+        const ownerCell = row.querySelector('td:nth-child(3)');
+        
+        if (ownerCell) {
+            const owner = ownerCell.textContent.trim();
+            
+            // Filter by owner
+            if (ownerFilter !== 'all' && owner !== ownerFilter) {
+                showRow = false;
+            }
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+    
+    // Filter leaderboard table
+    const leaderboardRows = document.querySelectorAll('#leagueTableBody tr');
+    leaderboardRows.forEach(row => {
+        let showRow = true;
+        const playerCell = row.querySelector('td:nth-child(2)');
+        
+        if (playerCell) {
+            const player = playerCell.textContent.trim();
+            
+            // Filter by owner
+            if (ownerFilter !== 'all' && player !== ownerFilter) {
+                showRow = false;
+            }
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+    
+    // Filter knockout matches
+    const knockoutMatches = document.querySelectorAll('.match');
+    knockoutMatches.forEach(match => {
+        let showMatch = true;
+        const teamOwners = match.querySelectorAll('.team-owner');
+        
+        if (ownerFilter !== 'all') {
+            let hasOwner = false;
+            teamOwners.forEach(ownerSpan => {
+                if (ownerSpan.textContent.trim() === ownerFilter) {
+                    hasOwner = true;
+                }
+            });
+            if (!hasOwner) {
+                showMatch = false;
+            }
+        }
+        
+        match.style.display = showMatch ? '' : 'none';
+    });
+}
+
 
 // Render third place teams
 function renderThirdPlaceTeams() {
     const tbody = document.getElementById('thirdPlaceTeams');
     tbody.innerHTML = '';
     
+    // Get all third place teams
+    const thirdPlaceTeams = [];
     Object.keys(groups).forEach(groupName => {
-        const thirdPlaceTeam = groups[groupName][2]; // Assuming 3rd position
-        const owner = findOwner(thirdPlaceTeam);
-        const standing = teamStandings[thirdPlaceTeam];
+        const groupTeams = groups[groupName].map(team => ({
+            team: team,
+            owner: findOwner(team),
+            group: groupName,
+            ...teamStandings[team]
+        }));
+        
+        // Sort to find third place
+        groupTeams.sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            const gdA = a.goalsFor - a.goalsAgainst;
+            const gdB = b.goalsFor - b.goalsAgainst;
+            if (gdB !== gdA) return gdB - gdA;
+            if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+            return a.yellowCards - b.yellowCards;
+        });
+        
+        if (groupTeams[2]) {
+            thirdPlaceTeams.push(groupTeams[2]);
+        }
+    });
+    
+    // Sort third place teams with yellow cards as tiebreaker
+    thirdPlaceTeams.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        const gdA = a.goalsFor - a.goalsAgainst;
+        const gdB = b.goalsFor - b.goalsAgainst;
+        if (gdB !== gdA) return gdB - gdA;
+        if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+        return a.yellowCards - b.yellowCards;
+    });
+    
+    thirdPlaceTeams.forEach((teamData, index) => {
+        const goalDiff = teamData.goalsFor - teamData.goalsAgainst;
+        const gdDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
         
         const row = document.createElement('tr');
+        
+        // Add special class to 8th place team to show qualification line
+        if (index === 7) {
+            row.classList.add('qualification-cutoff');
+        }
+        
         row.innerHTML = `
-            <td>Group ${groupName}</td>
-            <td>${thirdPlaceTeam}</td>
-            <td>${owner}</td>
-            <td>${standing.points}</td>
+            <td><strong>${index + 1}</strong></td>
+            <td><strong>${teamData.team}</strong></td>
+            <td>${teamData.owner}</td>
+            <td>${teamData.played}</td>
+            <td>${teamData.won}</td>
+            <td>${teamData.drawn}</td>
+            <td>${teamData.lost}</td>
+            <td>${teamData.goalsFor}</td>
+            <td>${teamData.goalsAgainst}</td>
+            <td>${gdDisplay}</td>
+            <td>${teamData.yellowCards}</td>
+            <td><strong>${teamData.points}</strong></td>
         `;
         tbody.appendChild(row);
     });
@@ -361,7 +556,7 @@ function calculateLeagueTable() {
 }
 
 // Render league table
-function renderLeagueTable(filterPlayer = 'all') {
+function renderLeagueTable() {
     const leagueData = calculateLeagueTable();
     const tbody = document.getElementById('leagueTableBody');
     tbody.innerHTML = '';
@@ -370,191 +565,447 @@ function renderLeagueTable(filterPlayer = 'all') {
     const sortedPlayers = Object.entries(leagueData).sort((a, b) => b[1].points - a[1].points);
     
     sortedPlayers.forEach(([player, data], index) => {
-        if (filterPlayer === 'all' || filterPlayer === player) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${index + 1}</td>
-                <td><strong>${player}</strong></td>
-                <td>${data.teams.join(', ')}</td>
-                <td>${data.played}</td>
-                <td>${data.won}</td>
-                <td>${data.drawn}</td>
-                <td>${data.lost}</td>
-                <td><strong>${data.points}</strong></td>
-            `;
-            tbody.appendChild(row);
+        const row = document.createElement('tr');
+        
+        // Create individual team cells with elimination check
+        const teamCells = data.teams.map(team => {
+            const standing = teamStandings[team];
+            // Check if team is eliminated (finished group stage and not in top 3)
+            const isEliminated = standing && standing.played >= 3 && standing.position > 3;
+            const teamClass = isEliminated ? 'class="eliminated-team"' : '';
+            return `<td ${teamClass}>${team}</td>`;
+        }).join('');
+        
+        // Pad with empty cells if player has fewer than 4 teams
+        const emptyTeamCells = '<td>-</td>'.repeat(4 - data.teams.length);
+        
+        row.innerHTML = `
+            <td><strong>${index + 1}</strong></td>
+            <td><strong>${player}</strong></td>
+            ${teamCells}${emptyTeamCells}
+            <td>${data.played}</td>
+            <td>${data.won}</td>
+            <td>${data.drawn}</td>
+            <td>${data.lost}</td>
+            <td><strong>${data.points}</strong></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Get qualified teams from groups
+function getQualifiedTeams() {
+    const qualified = {
+        winners: {},
+        runnersUp: {},
+        thirdPlace: []
+    };
+    
+    // Get top 2 from each group
+    Object.keys(groups).forEach(groupName => {
+        const groupTeams = groups[groupName].map(team => ({
+            team: team,
+            owner: findOwner(team),
+            group: groupName,
+            ...teamStandings[team]
+        }));
+        
+        // Sort teams by points, goal difference, goals scored
+        groupTeams.sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            const gdA = a.goalsFor - a.goalsAgainst;
+            const gdB = b.goalsFor - b.goalsAgainst;
+            if (gdB !== gdA) return gdB - gdA;
+            return b.goalsFor - a.goalsFor;
+        });
+        
+        qualified.winners[groupName] = groupTeams[0];
+        qualified.runnersUp[groupName] = groupTeams[1];
+        if (groupTeams[2]) {
+            qualified.thirdPlace.push(groupTeams[2]);
         }
     });
+    
+    // Sort third place teams and take top 8
+    qualified.thirdPlace.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        const gdA = a.goalsFor - a.goalsAgainst;
+        const gdB = b.goalsFor - b.goalsAgainst;
+        if (gdB !== gdA) return gdB - gdA;
+        return b.goalsFor - a.goalsFor;
+    });
+    qualified.bestThirds = qualified.thirdPlace.slice(0, 8);
+    
+    return qualified;
 }
 
-// Populate player filter
-function populatePlayerFilter() {
-    const select = document.getElementById('playerFilter');
-    Object.keys(players).forEach(player => {
-        const option = document.createElement('option');
-        option.value = player;
-        option.textContent = player;
-        select.appendChild(option);
+// Allocate third place teams to matches based on FIFA rules
+function allocateThirdPlaceTeams(bestThirds) {
+    const allocation = {};
+    
+    // Create a map of third place teams by group
+    const thirdByGroup = {};
+    bestThirds.forEach(team => {
+        thirdByGroup[team.group] = team;
+    });
+    
+    // Get which groups have qualifying third-place teams
+    const qualifyingGroups = bestThirds.map(t => t.group).sort();
+    
+    // FIFA allocation rules with priority order for each match
+    // Priority is left to right - pick first available team
+    const matchPriorities = {
+        74: ['A', 'B', 'C', 'D', 'F'],  // Match 74: E winners vs 3rd from A/B/C/D/F
+        77: ['C', 'D', 'F', 'G', 'H'],  // Match 77: I winners vs 3rd from C/D/F/G/H
+        79: ['C', 'E', 'F', 'H', 'I'],  // Match 79: A winners vs 3rd from C/E/F/H/I
+        80: ['E', 'H', 'I', 'J', 'K'],  // Match 80: L winners vs 3rd from E/H/I/J/K
+        81: ['B', 'E', 'F', 'I', 'J'],  // Match 81: D winners vs 3rd from B/E/F/I/J
+        82: ['A', 'E', 'H', 'I', 'J'],  // Match 82: G winners vs 3rd from A/E/H/I/J
+        85: ['E', 'F', 'G', 'I', 'J'],  // Match 85: B winners vs 3rd from E/F/G/I/J
+        87: ['D', 'E', 'I', 'J', 'L']   // Match 87: K winners vs 3rd from D/E/I/J/L
+    };
+    
+    // Track which teams have been allocated
+    const allocated = new Set();
+    
+    // Allocate teams to matches following priority order
+    for (const [matchNum, priorities] of Object.entries(matchPriorities)) {
+        for (const group of priorities) {
+            if (thirdByGroup[group] && !allocated.has(group)) {
+                allocation[matchNum] = thirdByGroup[group];
+                allocated.add(group);
+                break;
+            }
+        }
+    }
+    
+    return allocation;
+}
+
+// Array of accent colors for knockout matches (same as groups)
+const accentColors = [
+    '#00CED1', '#9370DB', '#ADFF2F', '#FF4500', '#1E90FF', '#FF1493',
+    '#FFD700', '#00FF7F', '#FF6347', '#BA55D3', '#00BFFF', '#FF69B4'
+];
+
+// Mock knockout match data with scores, live status, completion, and penalties
+const knockoutMatchData = {
+    73: { score1: 2, score2: 1, isLive: false, isCompleted: true },
+    74: { score1: 3, score2: 3, penalties1: 4, penalties2: 5, isLive: false, isCompleted: true },
+    75: { score1: 1, score2: 1, isLive: true, isCompleted: false },
+    // Add more as needed
+};
+
+// Check if entire round is complete
+function isRoundComplete(roundId, matches) {
+    if (roundId === 'round32') {
+        // Check if all round32 matches (73-88) are completed
+        const round32MatchNums = matches.map(m => m.matchNum).filter(n => n);
+        return round32MatchNums.length > 0 && round32MatchNums.every(matchNum =>
+            knockoutMatchData[matchNum]?.isCompleted === true
+        );
+    }
+    // For other rounds, check if all matches have scores (indicating completion)
+    return matches.every(match => {
+        if (!match.matchNum) return false;
+        return knockoutMatchData[match.matchNum]?.isCompleted === true;
     });
 }
 
-// Filter league table
-function filterLeagueTable() {
-    const select = document.getElementById('playerFilter');
-    renderLeagueTable(select.value);
+// Determine which round is upcoming (first round with incomplete matches)
+function getUpcomingRound(allRounds) {
+    const roundIds = ['round32', 'round16', 'quarters', 'semis', 'final'];
+    
+    for (const roundId of roundIds) {
+        const roundData = allRounds[roundId];
+        if (roundData && !roundData.isComplete) {
+            return roundId;
+        }
+    }
+    
+    return null; // All rounds complete
 }
 
-// Render knockout bracket
+// Render knockout bracket with official FIFA 2026 World Cup format
 function renderKnockoutBracket() {
-    // Round of 32 matchups (based on group winners and runners-up + best third place)
+    const qualified = getQualifiedTeams();
+    
+    // Allocate the 8 best third-place teams to their matches
+    const thirdPlaceAllocation = allocateThirdPlaceTeams(qualified.bestThirds);
+    
+    // Helper to get third place team or placeholder
+    const getThirdPlace = (matchNum, possibleGroups) => {
+        return thirdPlaceAllocation[matchNum] || {
+            team: `3rd ${possibleGroups}`,
+            owner: 'TBD',
+            group: possibleGroups
+        };
+    };
+    
+    // Round of 32 matchups - Official FIFA bracket structure
     const round32Matches = [
-        { team1: '1A', team2: '2B' },
-        { team1: '1C', team2: '2D' },
-        { team1: '1E', team2: '2F' },
-        { team1: '1G', team2: '2H' },
-        { team1: '1I', team2: '2J' },
-        { team1: '1K', team2: '2L' },
-        { team1: '1B', team2: '2A' },
-        { team1: '1D', team2: '2C' },
-        { team1: '1F', team2: '2E' },
-        { team1: '1H', team2: '2G' },
-        { team1: '1J', team2: '2I' },
-        { team1: '1L', team2: '2K' },
-        { team1: '3rd-1', team2: '3rd-2' },
-        { team1: '3rd-3', team2: '3rd-4' },
-        { team1: '3rd-5', team2: '3rd-6' },
-        { team1: '3rd-7', team2: '3rd-8' }
+        // Match 73
+        { team1: qualified.runnersUp['A'], team2: qualified.runnersUp['B'], matchNum: 73 },
+        // Match 74
+        { team1: qualified.winners['E'], team2: getThirdPlace(74, 'A/B/C/D/F'), matchNum: 74 },
+        // Match 75
+        { team1: qualified.winners['F'], team2: qualified.runnersUp['C'], matchNum: 75 },
+        // Match 76
+        { team1: qualified.winners['C'], team2: qualified.runnersUp['F'], matchNum: 76 },
+        // Match 77
+        { team1: qualified.winners['I'], team2: getThirdPlace(77, 'C/D/F/G/H'), matchNum: 77 },
+        // Match 78
+        { team1: qualified.runnersUp['E'], team2: qualified.runnersUp['I'], matchNum: 78 },
+        // Match 79
+        { team1: qualified.winners['A'], team2: getThirdPlace(79, 'C/E/F/H/I'), matchNum: 79 },
+        // Match 80
+        { team1: qualified.winners['L'], team2: getThirdPlace(80, 'E/H/I/J/K'), matchNum: 80 },
+        // Match 81
+        { team1: qualified.winners['D'], team2: getThirdPlace(81, 'B/E/F/I/J'), matchNum: 81 },
+        // Match 82
+        { team1: qualified.winners['G'], team2: getThirdPlace(82, 'A/E/H/I/J'), matchNum: 82 },
+        // Match 83
+        { team1: qualified.runnersUp['K'], team2: qualified.runnersUp['L'], matchNum: 83 },
+        // Match 84
+        { team1: qualified.winners['H'], team2: qualified.runnersUp['J'], matchNum: 84 },
+        // Match 85
+        { team1: qualified.winners['B'], team2: getThirdPlace(85, 'E/F/G/I/J'), matchNum: 85 },
+        // Match 86
+        { team1: qualified.winners['J'], team2: qualified.runnersUp['H'], matchNum: 86 },
+        // Match 87
+        { team1: qualified.winners['K'], team2: getThirdPlace(87, 'D/E/I/J/L'), matchNum: 87 },
+        // Match 88
+        { team1: qualified.runnersUp['D'], team2: qualified.runnersUp['G'], matchNum: 88 }
     ];
     
-    renderRound('round32', round32Matches);
-    renderRound('round16', Array(8).fill({ team1: 'TBD', team2: 'TBD' }));
-    renderRound('quarters', Array(4).fill({ team1: 'TBD', team2: 'TBD' }));
-    renderRound('semis', Array(2).fill({ team1: 'TBD', team2: 'TBD' }));
-    renderRound('final', [{ team1: 'TBD', team2: 'TBD' }]);
+    // Calculate subsequent rounds based on previous round results
+    const round16Matches = calculateNextRoundMatches(round32Matches, 89);
+    const quartersMatches = calculateNextRoundMatches(round16Matches, 97);
+    const semisMatches = calculateNextRoundMatches(quartersMatches, 101);
+    const finalMatches = calculateNextRoundMatches(semisMatches, 103);
+    
+    const allRounds = {
+        round32: { matches: round32Matches, isComplete: isRoundComplete('round32', round32Matches) },
+        round16: { matches: round16Matches, isComplete: isRoundComplete('round16', round16Matches) },
+        quarters: { matches: quartersMatches, isComplete: isRoundComplete('quarters', quartersMatches) },
+        semis: { matches: semisMatches, isComplete: isRoundComplete('semis', semisMatches) },
+        final: { matches: finalMatches, isComplete: isRoundComplete('final', finalMatches) }
+    };
+    
+    const upcomingRound = getUpcomingRound(allRounds);
+    
+    renderRound('round32', round32Matches, upcomingRound === 'round32', allRounds.round32.isComplete, round16Matches);
+    renderRound('round16', round16Matches, upcomingRound === 'round16', allRounds.round16.isComplete, quartersMatches);
+    renderRound('quarters', quartersMatches, upcomingRound === 'quarters', allRounds.quarters.isComplete, semisMatches);
+    renderRound('semis', semisMatches, upcomingRound === 'semis', allRounds.semis.isComplete, finalMatches);
+    renderRound('final', finalMatches, upcomingRound === 'final', allRounds.final.isComplete, []);
 }
 
-function renderRound(roundId, matches) {
+function renderRound(roundId, matches, isUpcoming = false, isComplete = false, nextRoundMatches = []) {
     const container = document.getElementById(roundId);
+    const roundDiv = container.parentElement;
     container.innerHTML = '';
+    
+    // Add or remove round status classes
+    roundDiv.classList.remove('upcoming-round', 'completed-round');
+    if (isComplete) {
+        roundDiv.classList.add('completed-round');
+    } else if (isUpcoming) {
+        roundDiv.classList.add('upcoming-round');
+    }
     
     matches.forEach((match, index) => {
         const matchDiv = document.createElement('div');
         matchDiv.className = 'match';
         
-        const team1 = getTeamFromCode(match.team1);
-        const team2 = getTeamFromCode(match.team2);
-        const owner1 = findOwner(team1);
-        const owner2 = findOwner(team2);
+        const team1 = match.team1 ? match.team1.team : 'TBD';
+        const team2 = match.team2 ? match.team2.team : 'TBD';
+        const owner1 = match.team1 ? match.team1.owner : '-';
+        const owner2 = match.team2 ? match.team2.owner : '-';
+        
+        // Check if match is undetermined (both teams TBD)
+        const isTBD = team1 === 'TBD' && team2 === 'TBD';
+        
+        // Get match data if available
+        const matchData = match.matchNum ? knockoutMatchData[match.matchNum] : null;
+        const score1 = matchData ? matchData.score1 : '';
+        const score2 = matchData ? matchData.score2 : '';
+        const penalties1 = matchData ? matchData.penalties1 : null;
+        const penalties2 = matchData ? matchData.penalties2 : null;
+        const isLive = matchData ? matchData.isLive : false;
+        const matchIsCompleted = matchData ? matchData.isCompleted : false;
+        
+        // Determine which team is eliminated (lost the match)
+        let team1Eliminated = false;
+        let team2Eliminated = false;
+        
+        if (matchIsCompleted && score1 !== '' && score2 !== '') {
+            if (penalties1 !== null && penalties1 !== undefined && penalties2 !== null && penalties2 !== undefined) {
+                // Decided by penalties
+                team1Eliminated = penalties1 < penalties2;
+                team2Eliminated = penalties2 < penalties1;
+            } else {
+                // Decided in regular/extra time
+                team1Eliminated = score1 < score2;
+                team2Eliminated = score2 < score1;
+            }
+        }
+        
+        // Check if this match's winner has progressed to next round
+        let hasProgressed = false;
+        if (matchIsCompleted && nextRoundMatches && nextRoundMatches.length > 0) {
+            // Check if either team from this match appears in the next round
+            const matchWinner = team1Eliminated ? team2 : (team2Eliminated ? team1 : null);
+            if (matchWinner) {
+                hasProgressed = nextRoundMatches.some(nextMatch =>
+                    (nextMatch.team1 && nextMatch.team1.team === matchWinner) ||
+                    (nextMatch.team2 && nextMatch.team2.team === matchWinner)
+                );
+            }
+        }
+        
+        // Select a random accent color for this match
+        const accentColor = accentColors[Math.floor(Math.random() * accentColors.length)];
+        
+        // Apply appropriate styling (don't apply to individual matches if round is complete)
+        if (!isComplete) {
+            if (hasProgressed) {
+                matchDiv.classList.add('progressed-match');
+            } else if (isTBD) {
+                matchDiv.classList.add('tbd-match');
+            } else if (isLive) {
+                matchDiv.classList.add('live-match');
+            } else {
+                // Apply random accent color border
+                matchDiv.style.borderColor = accentColor;
+            }
+        }
+        
+        // Build score display with penalties if applicable (only show penalties if they exist)
+        let score1Display = '';
+        let score2Display = '';
+        
+        if (score1 !== '') {
+            if (penalties1 !== null && penalties1 !== undefined) {
+                score1Display = `${score1} <span class="penalty-score">(${penalties1})</span>`;
+            } else {
+                score1Display = score1;
+            }
+        }
+        
+        if (score2 !== '') {
+            if (penalties2 !== null && penalties2 !== undefined) {
+                score2Display = `${score2} <span class="penalty-score">(${penalties2})</span>`;
+            } else {
+                score2Display = score2;
+            }
+        }
         
         matchDiv.innerHTML = `
-            <div class="match-team">
-                <span class="team-name">${team1}</span>
-                <span class="team-owner">${owner1}</span>
+            <div class="match-team ${team1Eliminated ? 'eliminated' : ''}">
+                <div class="team-info">
+                    <span class="team-name">${team1}</span>
+                    <span class="team-owner">${owner1}</span>
+                </div>
+                <span class="team-score">${score1Display}</span>
             </div>
-            <div class="match-vs">vs</div>
-            <div class="match-team">
-                <span class="team-name">${team2}</span>
-                <span class="team-owner">${owner2}</span>
+            <div class="match-team ${team2Eliminated ? 'eliminated' : ''}">
+                <div class="team-info">
+                    <span class="team-name">${team2}</span>
+                    <span class="team-owner">${owner2}</span>
+                </div>
+                <span class="team-score">${score2Display}</span>
             </div>
         `;
         container.appendChild(matchDiv);
     });
 }
 
-function getTeamFromCode(code) {
-    if (code === 'TBD') return 'TBD';
-    if (code.startsWith('3rd')) return code;
+// Calculate next round matches from previous round winners
+function calculateNextRoundMatches(previousRoundMatches, startingMatchNum) {
+    const nextRound = [];
     
-    const groupLetter = code.substring(1);
-    const position = parseInt(code.substring(0, 1)) - 1;
-    
-    if (groups[groupLetter] && groups[groupLetter][position]) {
-        return groups[groupLetter][position];
+    // Pair winners from previous round
+    // Matches are paired: (match1 winner vs match2 winner), (match3 winner vs match4 winner), etc.
+    for (let i = 0; i < previousRoundMatches.length; i += 2) {
+        const match1 = previousRoundMatches[i];
+        const match2 = previousRoundMatches[i + 1];
+        
+        let winner1 = null;
+        let winner2 = null;
+        
+        // Determine winner of match1
+        if (match1 && match1.matchNum && knockoutMatchData[match1.matchNum]) {
+            const data = knockoutMatchData[match1.matchNum];
+            if (data.isCompleted && data.score1 !== undefined && data.score2 !== undefined) {
+                // Check if decided by penalties
+                if (data.penalties1 !== null && data.penalties1 !== undefined &&
+                    data.penalties2 !== null && data.penalties2 !== undefined) {
+                    winner1 = data.penalties1 > data.penalties2 ? match1.team1 : match1.team2;
+                } else {
+                    // Decided in regular/extra time
+                    if (data.score1 > data.score2) {
+                        winner1 = match1.team1;
+                    } else if (data.score2 > data.score1) {
+                        winner1 = match1.team2;
+                    }
+                }
+            }
+        }
+        
+        // Determine winner of match2
+        if (match2 && match2.matchNum && knockoutMatchData[match2.matchNum]) {
+            const data = knockoutMatchData[match2.matchNum];
+            if (data.isCompleted && data.score1 !== undefined && data.score2 !== undefined) {
+                // Check if decided by penalties
+                if (data.penalties1 !== null && data.penalties1 !== undefined &&
+                    data.penalties2 !== null && data.penalties2 !== undefined) {
+                    winner2 = data.penalties1 > data.penalties2 ? match2.team1 : match2.team2;
+                } else {
+                    // Decided in regular/extra time
+                    if (data.score1 > data.score2) {
+                        winner2 = match2.team1;
+                    } else if (data.score2 > data.score1) {
+                        winner2 = match2.team2;
+                    }
+                }
+            }
+        }
+        
+        nextRound.push({
+            team1: winner1,
+            team2: winner2,
+            matchNum: startingMatchNum + Math.floor(i / 2)
+        });
     }
-    return code;
+    
+    return nextRound;
 }
 
-// Render statistics
-function renderStatistics() {
-    // Fastest goals
-    const fastestGoalsList = document.getElementById('fastestGoals');
-    if (statistics.fastestGoals.length === 0) {
-        fastestGoalsList.innerHTML = '<li>No data yet</li>';
-    } else {
-        fastestGoalsList.innerHTML = statistics.fastestGoals
-            .slice(0, 3)
-            .map(goal => `<li>${goal.team} - ${goal.time}' (${goal.player}) - Owner: ${findOwner(goal.team)}</li>`)
-            .join('');
+// Render fixtures (placeholder for future implementation)
+function renderFixtures() {
+    // Fixtures will be populated when match data is available
+    const fixturesContainer = document.getElementById('fixturesContainer');
+    if (fixturesContainer) {
+        fixturesContainer.innerHTML = '<p>Fixtures will be displayed here when available.</p>';
     }
-    
-    // Fastest cards
-    const fastestCardsList = document.getElementById('fastestCards');
-    if (statistics.fastestCards.length === 0) {
-        fastestCardsList.innerHTML = '<li>No data yet</li>';
-    } else {
-        fastestCardsList.innerHTML = statistics.fastestCards
-            .slice(0, 3)
-            .map(card => `<li>${card.team} - ${card.time}' (${card.player}, ${card.type}) - Owner: ${findOwner(card.team)}</li>`)
-            .join('');
-    }
-    
-    // Most conceded
-    const mostConcededList = document.getElementById('mostConceded');
-    if (statistics.mostConceded.length === 0) {
-        mostConcededList.innerHTML = '<li>No data yet</li>';
-    } else {
-        mostConcededList.innerHTML = statistics.mostConceded
-            .slice(0, 3)
-            .map(game => `<li>${game.team} - ${game.goals} goals vs ${game.opponent} - Owner: ${findOwner(game.team)}</li>`)
-            .join('');
-    }
-    
-    // Most cards by player
-    const mostCardsTable = document.getElementById('mostCards');
-    const sortedCards = Object.entries(statistics.playerCards)
-        .sort((a, b) => b[1].total - a[1].total);
-    
-    mostCardsTable.innerHTML = sortedCards
-        .map(([player, cards]) => `
-            <tr>
-                <td>${player}</td>
-                <td>${cards.yellow}</td>
-                <td>${cards.red}</td>
-                <td><strong>${cards.total}</strong></td>
-            </tr>
-        `)
-        .join('');
-}
-
-// Show stats form (placeholder)
-function showStatsForm() {
-    alert('Statistics update form would open here. In a full implementation, this would allow you to:\n\n' +
-          '- Add fastest goals with time and player\n' +
-          '- Add fastest cards with time and type\n' +
-          '- Record goals conceded in matches\n' +
-          '- Update card counts for teams\n\n' +
-          'For now, you can manually update the statistics object in the JavaScript code.');
 }
 
 // Manual refresh function
 function manualRefresh() {
-    fetchRealTimeStandings();
+    renderGroups();
+    renderLeagueTable();
+    renderThirdPlaceTeams();
+    alert('Data refreshed!');
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     renderGroups();
-    populatePlayerFilter();
     renderLeagueTable();
-    renderStatistics();
-    
-    // Start auto-refresh for real-time data
-    startAutoRefresh();
-});
-
-// Clean up on page unload
-window.addEventListener('beforeunload', () => {
-    stopAutoRefresh();
+    renderThirdPlaceTeams();
+    renderKnockoutBracket();
+    renderFixtures();
 });
 
 // Made with Bob

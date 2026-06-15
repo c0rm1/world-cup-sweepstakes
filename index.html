@@ -4,320 +4,146 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Cup Sweepstakes 2026</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
-    <header>
-        <h1>🏆 World Cup 2026 Sweepstakes 🏆</h1>
-        <nav>
-            <button class="nav-btn active" onclick="showPage('groups')">Groups</button>
-            <button class="nav-btn" onclick="showPage('league')">League Table</button>
-            <button class="nav-btn" onclick="showPage('knockout')">Knockout Bracket</button>
-            <button class="nav-btn" onclick="showPage('stats')">Statistics</button>
-        </nav>
-    </header>
-
-    <main>
-        <!-- GROUPS PAGE -->
-        <div id="groups-page" class="page active">
-            <div class="live-update-bar">
-                <div class="update-status">
-                    <span class="live-indicator">🔴 LIVE</span>
-                    <span>Last Update: <span id="lastUpdate">Loading...</span></span>
+    <div class="container">
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header with Filters -->
+            <header class="top-bar">
+                <h1>World Cup Sweeps</h1>
+                <div class="filters">
+                    <div class="search-container">
+                        <input type="text" id="playerSearch" placeholder="Search player..." oninput="handlePlayerSearch()">
+                        <button id="clearSearch" class="clear-btn" onclick="clearPlayerSearch()" style="display: none;">×</button>
+                        <div id="playerDropdown" class="player-dropdown"></div>
+                    </div>
+                    <button class="refresh-btn" onclick="manualRefresh()">Refresh</button>
                 </div>
-                <button class="refresh-btn" onclick="manualRefresh()">🔄 Refresh Now</button>
+            </header>
+
+            <!-- GROUPS PAGE -->
+            <div id="groups-page" class="page active">
+                <div class="groups-grid" id="groupsGrid">
+                    <!-- Groups will be dynamically inserted here -->
+                </div>
             </div>
-            
-            <h2>Group Stage Teams</h2>
-            
-            <div class="groups-container">
-                <div class="group-card">
-                    <h3>Group A</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupA"></tbody>
-                    </table>
-                </div>
 
-                <div class="group-card">
-                    <h3>Group B</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupB"></tbody>
-                    </table>
+            <!-- KNOCKOUT PAGE -->
+            <div id="knockout-page" class="page">
+                <div class="knockout-container">
+                    <div class="knockout-round">
+                        <h3>Round of 32</h3>
+                        <div id="round32" class="matches"></div>
+                    </div>
+                    <div class="knockout-round">
+                        <h3>Round of 16</h3>
+                        <div id="round16" class="matches"></div>
+                    </div>
+                    <div class="knockout-round">
+                        <h3>Quarter Finals</h3>
+                        <div id="quarters" class="matches"></div>
+                    </div>
+                    <div class="knockout-round">
+                        <h3>Semi Finals</h3>
+                        <div id="semis" class="matches"></div>
+                    </div>
+                    <div class="knockout-round">
+                        <h3>Final</h3>
+                        <div id="final" class="matches"></div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="group-card">
-                    <h3>Group C</h3>
-                    <table class="group-table">
+            <!-- THIRD PLACE PAGE -->
+            <div id="third-place-page" class="page">
+                <div class="content-card">
+                    <h2>Third Place Teams</h2>
+                    <table class="data-table">
                         <thead>
                             <tr>
+                                <th>Rank</th>
                                 <th>Team</th>
                                 <th>Owner</th>
+                                <th>P</th>
+                                <th>W</th>
+                                <th>D</th>
+                                <th>L</th>
+                                <th>GF</th>
+                                <th>GA</th>
+                                <th>GD</th>
+                                <th>YC</th>
+                                <th>Pts</th>
                             </tr>
                         </thead>
-                        <tbody id="groupC"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group D</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupD"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group E</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupE"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group F</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupF"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group G</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupG"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group H</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupH"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group I</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupI"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group J</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupJ"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group K</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupK"></tbody>
-                    </table>
-                </div>
-
-                <div class="group-card">
-                    <h3>Group L</h3>
-                    <table class="group-table">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th>Owner</th>
-                            </tr>
-                        </thead>
-                        <tbody id="groupL"></tbody>
+                        <tbody id="thirdPlaceTeams"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="third-place-section">
-                <h2>Third Place Teams</h2>
-                <table class="third-place-table">
-                    <thead>
-                        <tr>
-                            <th>Group</th>
-                            <th>Team</th>
-                            <th>Owner</th>
-                            <th>Points</th>
-                        </tr>
-                    </thead>
-                    <tbody id="thirdPlaceTeams"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- LEAGUE TABLE PAGE -->
-        <div id="league-page" class="page">
-            <h2>Sweepstakes League Table</h2>
-            <p class="subtitle">Points: 3 for a win, 1 for a draw</p>
-            
-            <div class="filter-section">
-                <label for="playerFilter">Filter by Player:</label>
-                <select id="playerFilter" onchange="filterLeagueTable()">
-                    <option value="all">All Players</option>
-                </select>
-            </div>
-
-            <table class="league-table">
-                <thead>
-                    <tr>
-                        <th>Pos</th>
-                        <th>Player</th>
-                        <th>Teams</th>
-                        <th>Played</th>
-                        <th>Won</th>
-                        <th>Draw</th>
-                        <th>Lost</th>
-                        <th>Points</th>
-                    </tr>
-                </thead>
-                <tbody id="leagueTableBody"></tbody>
-            </table>
-        </div>
-
-        <!-- KNOCKOUT BRACKET PAGE -->
-        <div id="knockout-page" class="page">
-            <h2>Projected Knockout Bracket</h2>
-            <p class="subtitle">Based on current group standings</p>
-
-            <div class="knockout-container">
-                <div class="knockout-round">
-                    <h3>Round of 32</h3>
-                    <div id="round32" class="matches"></div>
-                </div>
-
-                <div class="knockout-round">
-                    <h3>Round of 16</h3>
-                    <div id="round16" class="matches"></div>
-                </div>
-
-                <div class="knockout-round">
-                    <h3>Quarter Finals</h3>
-                    <div id="quarters" class="matches"></div>
-                </div>
-
-                <div class="knockout-round">
-                    <h3>Semi Finals</h3>
-                    <div id="semis" class="matches"></div>
-                </div>
-
-                <div class="knockout-round">
-                    <h3>Final</h3>
-                    <div id="final" class="matches"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- STATISTICS PAGE -->
-        <div id="stats-page" class="page">
-            <h2>Tournament Statistics</h2>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>⚡ 3 Fastest Goals</h3>
-                    <ol id="fastestGoals">
-                        <li>No data yet</li>
-                    </ol>
-                </div>
-
-                <div class="stat-card">
-                    <h3>🟨 Fastest Card Received</h3>
-                    <ol id="fastestCards">
-                        <li>No data yet</li>
-                    </ol>
-                </div>
-
-                <div class="stat-card">
-                    <h3>🥅 Most Goals Conceded (Single Game)</h3>
-                    <ol id="mostConceded">
-                        <li>No data yet</li>
-                    </ol>
-                </div>
-
-                <div class="stat-card">
-                    <h3>🟥 Most Cards in Groups (By Player)</h3>
-                    <table class="stats-table">
+            <!-- LEADERBOARD PAGE -->
+            <div id="leaderboard-page" class="page">
+                <div class="content-card">
+                    <h2>Sweepstakes Leaderboard</h2>
+                    <p class="subtitle">Total owned teams league table</p>
+                    <table class="data-table">
                         <thead>
                             <tr>
+                                <th>Pos</th>
                                 <th>Player</th>
-                                <th>Yellow</th>
-                                <th>Red</th>
-                                <th>Total</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th>P</th>
+                                <th>W</th>
+                                <th>D</th>
+                                <th>L</th>
+                                <th>Pts</th>
                             </tr>
                         </thead>
-                        <tbody id="mostCards"></tbody>
+                        <tbody id="leagueTableBody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="stats-input-section">
-                <h3>Update Statistics</h3>
-                <button onclick="showStatsForm()">Add/Update Stats</button>
+            <!-- FIXTURES PAGE -->
+            <div id="fixtures-page" class="page">
+                <div class="content-card">
+                    <h2>Fixtures</h2>
+                    <p class="subtitle">All group stage matches</p>
+                    <div id="fixturesContainer">
+                        <p>Fixtures will be displayed here when available.</p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </main>
+        </main>
 
-    <footer>
-        <p>World Cup 2026 Sweepstakes | Good luck! 🍀</p>
-    </footer>
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="image copy.png" alt="World Cup 2026">
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="showPage('groups')">
+                    <span>Groups</span>
+                </button>
+                <button class="nav-item" onclick="showPage('knockout')">
+                    <span>Knockouts</span>
+                </button>
+                <button class="nav-item" onclick="showPage('third-place')">
+                    <span>3rd Place</span>
+                </button>
+                <button class="nav-item" onclick="showPage('leaderboard')">
+                    <span>Leaderboard</span>
+                </button>
+                <button class="nav-item" onclick="showPage('fixtures')">
+                    <span>Fixtures</span>
+                </button>
+            </nav>
+        </aside>
+    </div>
 
     <script src="script.js"></script>
 </body>

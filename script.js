@@ -136,20 +136,20 @@ const flagColors = {
     'TBD': ['#888888', '#BBBBBB']
 };
 
-// Group assignments (World Cup 2026 format - 12 groups of 4)
+// Group assignments (World Cup 2026 - CORRECT from API)
 const groups = {
-    'A': ['USA', 'MEX', 'CAN', 'CPV'],
-    'B': ['BRA', 'ARG', 'URU', 'COL'],
-    'C': ['GER', 'ESP', 'NED', 'SUI'],
-    'D': ['FRA', 'ENG', 'BEL', 'POR'],
-    'E': ['CRO', 'SWE', 'ALG', 'SEN'],
-    'F': ['MAR', 'EGY', 'TUN', 'IRN'],
-    'G': ['JPN', 'KOR', 'AUS', 'QAT'],
-    'H': ['CIV', 'GHA', 'COD', 'RSA'],
-    'I': ['KSA', 'IRQ', 'UZB', 'JOR'],
-    'J': ['TUR', 'SCO', 'NOR', 'AUT'],
-    'K': ['ECU', 'PAR', 'PAN', 'BIH'],
-    'L': ['NZL', 'CUW', 'HAI', 'CZE']
+    'A': ['MEX', 'RSA', 'KOR', 'CZE'],
+    'B': ['CAN', 'BIH', 'QAT', 'SUI'],
+    'C': ['BRA', 'MAR', 'HAI', 'SCO'],
+    'D': ['USA', 'PAR', 'AUS', 'TUR'],
+    'E': ['GER', 'CUW', 'CIV', 'ECU'],
+    'F': ['NED', 'JPN', 'SWE', 'TUN'],
+    'G': ['BEL', 'EGY', 'IRN', 'NZL'],
+    'H': ['ESP', 'CPV', 'KSA', 'URU'],
+    'I': ['FRA', 'SEN', 'IRQ', 'NOR'],
+    'J': ['ARG', 'ALG', 'AUT', 'JOR'],
+    'K': ['POR', 'COD', 'UZB', 'COL'],
+    'L': ['ENG', 'CRO', 'GHA', 'PAN'],
 };
 
 // Team standings (will be updated from API)

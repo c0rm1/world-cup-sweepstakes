@@ -1122,8 +1122,8 @@ function renderRound(roundId, matches, isUpcoming = false, isComplete = false, n
         
         // Get match data if available
         const matchData = match.matchNum ? knockoutMatchData[match.matchNum] : null;
-        const score1 = matchData ? matchData.score1 : '';
-        const score2 = matchData ? matchData.score2 : '';
+        const score1 = matchData && matchData.score1 !== null ? matchData.score1 : '';
+        const score2 = matchData && matchData.score2 !== null ? matchData.score2 : '';
         const penalties1 = matchData ? matchData.penalties1 : null;
         const penalties2 = matchData ? matchData.penalties2 : null;
         const isLive = matchData ? matchData.isLive : false;

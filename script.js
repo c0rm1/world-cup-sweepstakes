@@ -337,8 +337,6 @@ function fifaTieBreaker(a, b, allTeamsInGroup) {
     return a.team.localeCompare(b.team);
 }
 
-// Statistics data
-let statistics = {
 // FIFA tie-breaking for third-place teams (no head-to-head since different groups)
 function thirdPlaceTieBreaker(a, b) {
     // Step 1: Points
@@ -359,6 +357,8 @@ function thirdPlaceTieBreaker(a, b) {
     return a.team.localeCompare(b.team);
 }
 
+// Statistics data
+let statistics = {
     fastestGoals: [],
     fastestCards: [],
     mostConceded: [],

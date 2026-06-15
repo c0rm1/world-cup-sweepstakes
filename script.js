@@ -1033,6 +1033,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         matches = liveData.matches || [];
         liveGroups = liveData.groups || {};
         console.log('✅ Loaded data:', matches.length, 'matches');
+        
+        // Update timestamp
+        if (liveData.lastUpdated) {
+            const date = new Date(liveData.lastUpdated);
+            const timeStr = date.toLocaleString('en-IE', {
+                timeZone: 'Europe/Dublin',
+                dateStyle: 'short',
+                timeStyle: 'short'
+            });
+            document.getElementById('lastUpdated').textContent = `Data last updated: ${timeStr}`;
+        }
     }
     
     // Render all components

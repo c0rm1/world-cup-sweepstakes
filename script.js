@@ -1,31 +1,171 @@
+
+/**
+ * Get stadium name from stadium ID using API data
+ * @param {string} stadiumId - The stadium ID from the match data
+ * @returns {string} - Formatted stadium name with city and country
+ */
+function getStadiumName(stadiumId) {
+    if (!window.stadiums || !stadiumId) {
+        return "Stadium TBD";
+    }
+    
+    const stadium = window.stadiums.find(s => s.id === stadiumId);
+    if (!stadium) {
+        return "Stadium TBD";
+    }
+    
+    // Format: "Stadium Name, City, Country"
+    return `${stadium.name_en}, ${stadium.city_en}, ${stadium.country_en}`;
+}
+
+
 // Load version info from version.json
 async function loadVersionInfo() {
     try {
         const response = await fetch('version.json');
         if (!response.ok) {
+            console.info('ℹ️ version.json not found, using runtime timestamp instead');
             return null;
         }
         const version = await response.json();
         console.log('✅ Version loaded:', version.commit, '-', version.message);
         return version;
     } catch (error) {
-        console.warn('Could not load version info:', error);
+        console.info('ℹ️ Could not load version info, using runtime timestamp instead');
         return null;
     }
 }
 
-// Load live World Cup data from JSON file
+// Load live World Cup data from matches.csv
 async function loadLiveData() {
     try {
-        const response = await fetch('data/worldcup-data.json');
+        const response = await fetch('data/matches.csv');
         if (!response.ok) {
             console.warn('Live data not available, using static data');
             return null;
         }
         
-        const data = await response.json();
-        console.log('✅ Live data loaded:', data.lastUpdated);
-        console.log(`📊 ${data.matches.length} matches, ${Object.keys(data.groups).length} groups`);
+        const csvText = await response.text();
+        const lines = csvText.split('\n');
+        const headers = lines[0].split(',');
+        
+        // Find column indices
+        const matchNumIdx = headers.indexOf('match_num');
+        const dateIdx = headers.indexOf('date');
+        const groupIdx = headers.indexOf('group');
+        const team1Idx = headers.indexOf('team1');
+        const team2Idx = headers.indexOf('team2');
+        const scoreIdx = headers.indexOf('score');
+        const statusIdx = headers.indexOf('status');
+        const venueIdx = headers.indexOf('venue');
+        
+        // Parse matches
+        const matches = [];
+        const groupStandings = {};
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            const cols = lines[i].split(',');
+            const matchNum = parseInt(cols[matchNumIdx]);
+            const group = cols[groupIdx];
+            const team1 = cols[team1Idx];
+            const team2 = cols[team2Idx];
+            const score = cols[scoreIdx];
+            const status = cols[statusIdx];
+            
+            const match = {
+                matchNum,
+                team1,
+                team2,
+                group,
+                round: group.length === 1 ? 'group' : group.toLowerCase().replace(/\s+/g, ''),
+                status,
+                date: cols[dateIdx]
+            };
+            
+            // Parse score if match is finished
+            if (score !== '-' && status === 'FT') {
+                const scores = score.split('-');
+                if (scores.length === 2) {
+                    match.score1 = parseInt(scores[0]);
+                    match.score2 = parseInt(scores[1]);
+                    
+                    // Update group standings
+                    if (match.round === 'group') {
+                        if (!groupStandings[group]) {
+                            groupStandings[group] = {};
+                        }
+                        
+                        // Initialize teams if needed
+                        if (!groupStandings[group][team1]) {
+                            groupStandings[group][team1] = {
+                                team: team1,
+                                played: 0, won: 0, drawn: 0, lost: 0,
+                                goalsFor: 0, goalsAgainst: 0, points: 0
+                            };
+                        }
+                        if (!groupStandings[group][team2]) {
+                            groupStandings[group][team2] = {
+                                team: team2,
+                                played: 0, won: 0, drawn: 0, lost: 0,
+                                goalsFor: 0, goalsAgainst: 0, points: 0
+                            };
+                        }
+                        
+                        // Update stats
+                        const t1 = groupStandings[group][team1];
+                        const t2 = groupStandings[group][team2];
+                        
+                        t1.played++;
+                        t2.played++;
+                        t1.goalsFor += match.score1;
+                        t1.goalsAgainst += match.score2;
+                        t2.goalsFor += match.score2;
+                        t2.goalsAgainst += match.score1;
+                        
+                        if (match.score1 > match.score2) {
+                            t1.won++;
+                            t1.points += 3;
+                            t2.lost++;
+                        } else if (match.score2 > match.score1) {
+                            t2.won++;
+                            t2.points += 3;
+                            t1.lost++;
+                        } else {
+                            t1.drawn++;
+                            t2.drawn++;
+                            t1.points++;
+                            t2.points++;
+                        }
+                        
+                        t1.goalDifference = t1.goalsFor - t1.goalsAgainst;
+                        t2.goalDifference = t2.goalsFor - t2.goalsAgainst;
+                    }
+                }
+            }
+            
+            matches.push(match);
+        }
+        
+        // Convert group standings to arrays and sort
+        const groups = {};
+        for (const [groupName, teams] of Object.entries(groupStandings)) {
+            groups[groupName] = Object.values(teams).sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+                return b.goalsFor - a.goalsFor;
+            });
+        }
+        
+        const data = {
+            lastUpdated: new Date().toISOString(),
+            matches,
+            groups
+        };
+        
+        console.log('✅ Live data loaded from matches.csv');
+        console.log(`📊 ${matches.length} matches, ${Object.keys(groups).length} groups`);
         
         return data;
     } catch (error) {
@@ -53,13 +193,14 @@ async function loadCardData() {
             if (!line) continue;
             
             const parts = line.split(',');
-            if (parts.length < 5) continue;
+            if (parts.length < 6) continue;
             
             const team = parts[2];
             const cardType = parts[4];
+            const disciplineScore = parseInt(parts[6]) || 0;
             
             if (!cardData[team]) {
-                cardData[team] = { yellow: 0, red: 0 };
+                cardData[team] = { yellow: 0, red: 0, disciplineScore: 0 };
             }
             
             if (cardType === 'Yellow') {
@@ -67,6 +208,9 @@ async function loadCardData() {
             } else if (cardType === 'Red' || cardType === 'Yellow-red') {
                 cardData[team].red++;
             }
+            
+            // Use the discipline score from the CSV (it's the same for all cards of a team)
+            cardData[team].disciplineScore = disciplineScore;
         }
         
         console.log('✅ Card data loaded for', Object.keys(cardData).length, 'teams');
@@ -76,6 +220,28 @@ async function loadCardData() {
         return {};
     }
 }
+// Parse scorer data from API format
+// Expected format examples: "Player Name 45'", "Player Name 12', Player2 67'"
+function parseScorers(scorerString) {
+    if (!scorerString || scorerString === 'null') return [];
+    
+    const scorers = [];
+    // Split by comma to handle multiple scorers
+    const scorerParts = scorerString.split(',');
+    
+    for (const part of scorerParts) {
+        // Match pattern: "Name Surname 45'" or "Name 12'"
+        const match = part.trim().match(/^(.+?)\s+(\d+)(?:\+(\d+))?'$/);
+        if (match) {
+            const player = match[1].trim();
+            const minute = parseInt(match[2]) + (match[3] ? parseInt(match[3]) : 0);
+            scorers.push({ player, minute });
+        }
+    }
+    
+    return scorers;
+}
+
 
 // Global data loaded from API
 let matches = [];
@@ -198,7 +364,7 @@ function calculateStandings() {
     // Initialize all teams with zero stats
     Object.keys(groups).forEach(group => {
         groups[group].forEach(team => {
-            const cards = cardData[team] || { yellow: 0, red: 0 };
+            const cards = cardData[team] || { yellow: 0, red: 0, disciplineScore: 0 };
             standings[team] = {
                 group: group,
                 played: 0,
@@ -210,14 +376,14 @@ function calculateStandings() {
                 points: 0,
                 yellowCards: cards.yellow,
                 redCards: cards.red,
-                conductScore: 0  // Will be calculated: higher is better
+                conductScore: cards.disciplineScore  // From Wikipedia discipline table
             };
         });
     });
     
     // Process finished group stage matches
     matches.forEach(match => {
-        if (match.round === 'group' && match.status === 'FT' &&
+        if (match.type === 'group' && match.finished &&
             match.score1 !== null && match.score2 !== null) {
             
             const team1 = match.team1;
@@ -257,10 +423,11 @@ function calculateStandings() {
         }
     });
     
-    // Calculate conduct scores (higher is better, so negative points for cards)
-    // Yellow card = -1 point, Red card = -3 points
+    // Calculate conduct scores (higher is better, so negative total cards)
+    // Fewer cards = better conduct score
     Object.keys(standings).forEach(team => {
-        standings[team].conductScore = -(standings[team].yellowCards + (standings[team].redCards * 3));
+        const totalCards = standings[team].yellowCards + standings[team].redCards;
+        standings[team].conductScore = -totalCards;
     });
     
     return standings;
@@ -279,9 +446,9 @@ function fifaTieBreaker(a, b, allTeamsInGroup) {
     const tiedTeams = allTeamsInGroup.filter(t => t.points === a.points);
     if (tiedTeams.length === 2) {
         // Get head-to-head matches between these two teams
-        const h2hMatches = matches.filter(m => 
-            m.round === 'group' && m.status === 'FT' &&
-            ((m.team1 === a.team && m.team2 === b.team) || 
+        const h2hMatches = matches.filter(m =>
+            m.type === 'group' && m.finished &&
+            ((m.team1 === a.team && m.team2 === b.team) ||
              (m.team1 === b.team && m.team2 === a.team))
         );
         
@@ -331,7 +498,8 @@ function fifaTieBreaker(a, b, allTeamsInGroup) {
     if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
     
     // Step 2c: Conduct score (higher is better, fewer cards)
-    if (b.conductScore !== a.conductScore) return b.conductScore - a.conductScore;
+    // Since conductScore is negative (fewer cards = less negative = higher), we want higher scores first
+    if (a.conductScore !== b.conductScore) return b.conductScore - a.conductScore;
     
     // Step 3: FIFA ranking (we'll use alphabetical as proxy since we don't have real rankings)
     return a.team.localeCompare(b.team);
@@ -393,8 +561,13 @@ function showPage(pageName) {
     
     if (pageName === 'knockout') {
         renderKnockoutBracket();
+    } else if (pageName === 'fixtures') {
+        renderFixtures();
     }
 }
+
+// Track sort state for each group
+const groupSortState = {};
 
 // Render all groups
 function renderGroups() {
@@ -411,7 +584,7 @@ function renderGroups() {
         
         // Check if any match in this group is actually live RIGHT NOW
         const hasLiveGame = matches.some(match => {
-            if (match.round !== 'group' || match.status !== 'LIVE') return false;
+            if (match.type !== 'group' || !match.isLive) return false;
             
             // Check if any team from this group is in the match
             const groupTeamCodes = groupTeams.map(t => t.team);
@@ -471,8 +644,26 @@ function renderGroups() {
             groupCard.classList.add('live-group');
         }
         
-        // Sort teams using FIFA tie-breaking rules
-        groupData.teams.sort((a, b) => fifaTieBreaker(a, b, groupData.teams));
+        // Get current sort for this group (default to FIFA rules)
+        const currentSort = groupSortState[groupData.name] || 'fifa';
+        
+        // Sort teams based on current sort state
+        if (currentSort === 'cards') {
+            groupData.teams.sort((a, b) => {
+                const totalA = (a.yellowCards || 0) + (a.redCards || 0) * 2;
+                const totalB = (b.yellowCards || 0) + (b.redCards || 0) * 2;
+                return totalA - totalB; // Fewest cards first
+            });
+        } else if (currentSort === 'gd') {
+            groupData.teams.sort((a, b) => {
+                const gdA = a.goalsFor - a.goalsAgainst;
+                const gdB = b.goalsFor - b.goalsAgainst;
+                return gdA - gdB; // Lowest GD first
+            });
+        } else {
+            // Default FIFA tie-breaking rules
+            groupData.teams.sort((a, b) => fifaTieBreaker(a, b, groupData.teams));
+        }
         
         let tableHTML = `
             <h3>Group ${groupData.name}${groupData.isLive ? ' <span class="live-indicator">LIVE</span>' : ''}</h3>
@@ -490,8 +681,7 @@ function renderGroups() {
                         <th>GA</th>
                         <th>GD</th>
                         <th>Pts</th>
-                        <th title="Yellow Cards">YC</th>
-                        <th title="Red Cards">RC</th>
+                        <th title="Discipline: Yellow|Red">Y|R</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -500,6 +690,9 @@ function renderGroups() {
         groupData.teams.forEach((teamData, index) => {
             const goalDiff = teamData.goalsFor - teamData.goalsAgainst;
             const gdDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
+            const yellowCards = teamData.yellowCards || 0;
+            const redCards = teamData.redCards || 0;
+            const disciplineDisplay = `${yellowCards}|${redCards}`;
             
             tableHTML += `
                 <tr data-owner="${teamData.owner}">
@@ -514,8 +707,7 @@ function renderGroups() {
                     <td>${teamData.goalsAgainst}</td>
                     <td>${gdDisplay}</td>
                     <td><strong>${teamData.points}</strong></td>
-                    <td>${teamData.yellowCards || 0}</td>
-                    <td>${teamData.redCards || 0}</td>
+                    <td><span class="discipline-cell" title="${yellowCards} Yellow, ${redCards} Red">${disciplineDisplay}</span></td>
                 </tr>
             `;
         });
@@ -528,6 +720,12 @@ function renderGroups() {
         groupCard.innerHTML = tableHTML;
         container.appendChild(groupCard);
     });
+}
+
+// Sort group by different criteria
+function sortGroup(groupName, sortType) {
+    groupSortState[groupName] = sortType;
+    renderGroups();
 }
 
 // Current selected player for filtering
@@ -699,29 +897,40 @@ function renderThirdPlaceTeams() {
     tbody.innerHTML = '';
     
     // Get all third place teams
-    const thirdPlaceTeams = [];
-    Object.keys(groups).forEach(groupName => {
-        const groupTeams = groups[groupName].map(team => ({
-            team: team,
-            owner: findOwner(team),
-            group: groupName,
-            ...teamStandings[team]
-        }));
-        
-        // Sort to find third place using FIFA rules
-        groupTeams.sort((a, b) => fifaTieBreaker(a, b, groupTeams));
-        
-        if (groupTeams[2]) {
-            thirdPlaceTeams.push(groupTeams[2]);
-        }
-    });
+    let thirdPlaceTeams = [];
     
-    // Sort third place teams using FIFA rules for third-place ranking
-    thirdPlaceTeams.sort((a, b) => thirdPlaceTieBreaker(a, b));
+    // Use CSV data if available
+    if (window.thirdPlaceData && window.thirdPlaceData.length > 0) {
+        thirdPlaceTeams = window.thirdPlaceData;
+        console.log('📊 Using third place data from CSV');
+    } else {
+        // Fall back to calculating from groups
+        Object.keys(groups).forEach(groupName => {
+            const groupTeams = groups[groupName].map(team => ({
+                team: team,
+                owner: findOwner(team),
+                group: groupName,
+                ...teamStandings[team]
+            }));
+            
+            // Sort to find third place using FIFA rules
+            groupTeams.sort((a, b) => fifaTieBreaker(a, b, groupTeams));
+            
+            if (groupTeams[2]) {
+                thirdPlaceTeams.push(groupTeams[2]);
+            }
+        });
+        
+        // Sort third place teams using FIFA rules for third-place ranking
+        thirdPlaceTeams.sort((a, b) => thirdPlaceTieBreaker(a, b));
+    }
     
     thirdPlaceTeams.forEach((teamData, index) => {
         const goalDiff = teamData.goalsFor - teamData.goalsAgainst;
         const gdDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
+        const yellowCards = teamData.yellowCards || 0;
+        const redCards = teamData.redCards || 0;
+        const disciplineDisplay = `${yellowCards}|${redCards}`;
         
         const row = document.createElement('tr');
         
@@ -741,7 +950,7 @@ function renderThirdPlaceTeams() {
             <td>${teamData.goalsFor}</td>
             <td>${teamData.goalsAgainst}</td>
             <td>${gdDisplay}</td>
-            <td>${teamData.yellowCards}</td>
+            <td><span class="discipline-cell" title="${yellowCards} Yellow, ${redCards} Red">${disciplineDisplay}</span></td>
             <td><strong>${teamData.points}</strong></td>
         `;
         tbody.appendChild(row);
@@ -778,13 +987,232 @@ function calculateLeagueTable() {
 }
 
 // Render league table
+async function calculateLeaderboardStats() {
+    const stats = {
+        fastestGoal: { owner: null, team: null, minute: Infinity, match: null },
+        fastestCard: { owner: null, team: null, minute: Infinity, player: null, cardType: null, match: null },
+        mostCards: { owner: null, total: 0, yellow: 0, red: 0, straightRed: 0 },
+        worstGD: { owner: null, gd: Infinity }
+    };
+    
+    // Process all group stage matches for goals from API scorer data
+    matches.filter(m => m.type === 'group' && m.finished).forEach(match => {
+        // Process home scorers (already parsed as array)
+        if (match.homeScorers && match.homeScorers.length > 0) {
+            match.homeScorers.forEach(scorerStr => {
+                // Extract minute from scorer string like "Nestory Irankunda 27'"
+                const minuteMatch = scorerStr.match(/(\d+)['′](?:\+(\d+))?/);
+                if (minuteMatch) {
+                    const baseMinute = parseInt(minuteMatch[1]);
+                    const addedTime = minuteMatch[2] ? parseInt(minuteMatch[2]) : 0;
+                    const minute = baseMinute + addedTime;
+                    const player = scorerStr.replace(/\d+['′](?:\+\d+)?$/, '').replace(/\(OG\)|\(p\)/g, '').trim();
+                    
+                    const owner = findOwner(match.team1);
+                    if (owner && minute < stats.fastestGoal.minute) {
+                        stats.fastestGoal = {
+                            owner,
+                            team: match.team1,
+                            minute: minute,
+                            match: `${match.team1} vs ${match.team2}`,
+                            player: player
+                        };
+                    }
+                }
+            });
+        }
+        
+        // Process away scorers (already parsed as array)
+        if (match.awayScorers && match.awayScorers.length > 0) {
+            match.awayScorers.forEach(scorerStr => {
+                // Extract minute from scorer string like "Nestory Irankunda 27'"
+                const minuteMatch = scorerStr.match(/(\d+)['′](?:\+(\d+))?/);
+                if (minuteMatch) {
+                    const baseMinute = parseInt(minuteMatch[1]);
+                    const addedTime = minuteMatch[2] ? parseInt(minuteMatch[2]) : 0;
+                    const minute = baseMinute + addedTime;
+                    const player = scorerStr.replace(/\d+['′](?:\+\d+)?$/, '').replace(/\(OG\)|\(p\)/g, '').trim();
+                    
+                    const owner = findOwner(match.team2);
+                    if (owner && minute < stats.fastestGoal.minute) {
+                        stats.fastestGoal = {
+                            owner,
+                            team: match.team2,
+                            minute: minute,
+                            match: `${match.team1} vs ${match.team2}`,
+                            player: player
+                        };
+                    }
+                }
+            });
+        }
+    });
+    
+    // Process card data for fastest card
+    try {
+        const response = await fetch('data/worldcup-cards-enriched.csv');
+        if (response.ok) {
+            const text = await response.text();
+            const lines = text.trim().split('\n');
+            
+            // Skip header row
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const parts = line.split(',');
+                if (parts.length < 6) continue;
+                
+                const match = parts[0];
+                const team = parts[2];
+                const player = parts[3];
+                const cardType = parts[4];
+                const minuteStr = parts[5];
+                
+                // Parse minute (handle formats like "90+2", "23", etc.)
+                const minuteMatch = minuteStr.match(/(\d+)(?:\+(\d+))?/);
+                if (minuteMatch) {
+                    const baseMinute = parseInt(minuteMatch[1]);
+                    const addedTime = minuteMatch[2] ? parseInt(minuteMatch[2]) : 0;
+                    const minute = baseMinute + addedTime;
+                    
+                    const owner = findOwner(team);
+                    if (owner && minute < stats.fastestCard.minute) {
+                        stats.fastestCard = {
+                            owner,
+                            team,
+                            minute,
+                            player,
+                            cardType,
+                            match
+                        };
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Could not load card data for fastest card:', error);
+    }
+    
+    // Card data processing derived from standings/API data
+    try {
+        // Calculate most cards and straight reds per owner
+        const ownerCardCounts = {};
+        Object.entries(players).forEach(([owner, data]) => {
+            ownerCardCounts[owner] = { yellow: 0, red: 0, straightRed: 0 };
+            data.teams.forEach(team => {
+                const teamStanding = teamStandings[team];
+                if (teamStanding) {
+                    ownerCardCounts[owner].yellow += teamStanding.yellowCards || 0;
+                    ownerCardCounts[owner].red += teamStanding.redCards || 0;
+                    ownerCardCounts[owner].straightRed += teamStanding.redCards || 0;
+                }
+            });
+        });
+        // Find owner with most cards (weighted: yellow=1, red=3)
+        Object.entries(ownerCardCounts).forEach(([owner, counts]) => {
+            const total = counts.yellow + counts.red;
+            const weightedTotal = counts.yellow + (counts.red * 3);
+            const currentWeightedTotal = stats.mostCards.yellow + (stats.mostCards.red * 3);
+            
+            if (weightedTotal > currentWeightedTotal ||
+                (weightedTotal === currentWeightedTotal && counts.red > stats.mostCards.red) ||
+                (weightedTotal === currentWeightedTotal && counts.red === stats.mostCards.red && counts.straightRed > stats.mostCards.straightRed)) {
+                stats.mostCards = { owner, total, yellow: counts.yellow, red: counts.red, straightRed: counts.straightRed };
+            }
+        });
+    } catch (error) {
+        console.warn('Could not load card data for stats:', error);
+    }
+    
+    // Calculate worst combined goal difference
+    Object.entries(players).forEach(([owner, data]) => {
+        let combinedGD = 0;
+        data.teams.forEach(team => {
+            const standing = teamStandings[team];
+            if (standing) {
+                const gd = (standing.goalsFor || 0) - (standing.goalsAgainst || 0);
+                combinedGD += gd;
+            }
+        });
+        
+        if (combinedGD < stats.worstGD.gd) {
+            stats.worstGD = { owner, gd: combinedGD };
+        }
+    });
+    
+    return stats;
+}
+
+// Leaderboard sort state
+let leaderboardSortState = 'points';
+
 function renderLeagueTable() {
-    const leagueData = calculateLeagueTable();
     const tbody = document.getElementById('leagueTableBody');
     tbody.innerHTML = '';
     
-    // Sort by points
-    const sortedPlayers = Object.entries(leagueData).sort((a, b) => b[1].points - a[1].points);
+    let playersWithStats;
+    
+    // Use CSV leaderboard data if available
+    if (window.leaderboardData && window.leaderboardData.length > 0) {
+        console.log('📊 Using leaderboard data from CSV');
+        playersWithStats = window.leaderboardData.map(row => [
+            row.owner,
+            {
+                teams: row.teams.split(', '),
+                played: row.played,
+                won: row.won,
+                drawn: row.drawn,
+                lost: row.lost,
+                points: row.points,
+                totalYellow: row.yellowCards,
+                totalRed: row.redCards,
+                totalCards: row.yellowCards + row.redCards,
+                totalGD: row.goalDiff
+            }
+        ]);
+    } else {
+        // Fall back to calculating from league data
+        const leagueData = calculateLeagueTable();
+        
+        // Calculate additional stats for each player
+        playersWithStats = Object.entries(leagueData).map(([player, data]) => {
+            let totalCards = 0;
+            let totalYellow = 0;
+            let totalRed = 0;
+            let totalGD = 0;
+            
+            data.teams.forEach(team => {
+                const standing = teamStandings[team];
+                if (standing) {
+                    totalYellow += (standing.yellowCards || 0);
+                    totalRed += (standing.redCards || 0);
+                    totalCards += totalYellow + totalRed;
+                    totalGD += (standing.goalsFor || 0) - (standing.goalsAgainst || 0);
+                }
+            });
+            
+            return [player, { ...data, totalCards, totalYellow, totalRed, totalGD }];
+        });
+    }
+    
+    // Sort based on current sort state
+    let sortedPlayers;
+    if (leaderboardSortState === 'cards') {
+        // Sort by total cards first, then by red cards as tiebreaker
+        sortedPlayers = playersWithStats.sort((a, b) => {
+            const totalA = a[1].totalYellow + a[1].totalRed;
+            const totalB = b[1].totalYellow + b[1].totalRed;
+            if (totalB !== totalA) return totalB - totalA; // Most total cards first
+            return b[1].totalRed - a[1].totalRed; // Tiebreaker: more reds first
+        });
+    } else if (leaderboardSortState === 'gd') {
+        // Sort by GD ascending (lowest/worst at top)
+        sortedPlayers = playersWithStats.sort((a, b) => a[1].totalGD - b[1].totalGD);
+    } else {
+        // Default: sort by points
+        sortedPlayers = playersWithStats.sort((a, b) => b[1].points - a[1].points);
+    }
     
     sortedPlayers.forEach(([player, data], index) => {
         const row = document.createElement('tr');
@@ -807,7 +1235,7 @@ function renderLeagueTable() {
             // Find team's most recent match to determine won/lost
             const teamMatches = matches.filter(m =>
                 (m.team1 === team || m.team2 === team) &&
-                m.status === 'FT' &&
+                m.finished &&
                 m.score1 !== null && m.score2 !== null
             ).sort((a, b) => {
                 // Sort by match number descending to get most recent
@@ -841,6 +1269,9 @@ function renderLeagueTable() {
         // Pad with empty cells if player has fewer than 4 teams
         const emptyTeamCells = '<td class="team-status-eliminated world-cup-font">-</td>'.repeat(4 - data.teams.length);
         
+        const gdDisplay = data.totalGD > 0 ? `+${data.totalGD}` : data.totalGD;
+        const cardsDisplay = `${data.totalYellow}|${data.totalRed}`;
+        
         row.innerHTML = `
             <td><strong>${index + 1}</strong></td>
             <td><strong>${player}</strong></td>
@@ -849,10 +1280,123 @@ function renderLeagueTable() {
             <td>${data.won}</td>
             <td>${data.drawn}</td>
             <td>${data.lost}</td>
+            <td>${gdDisplay}</td>
+            <td><span class="discipline-cell">${cardsDisplay}</span></td>
             <td><strong>${data.points}</strong></td>
         `;
         tbody.appendChild(row);
     });
+}
+
+// Sort leaderboard by different criteria
+async function sortLeaderboard(sortType) {
+    leaderboardSortState = sortType;
+    
+    // Update subtitle
+    const subtitle = document.getElementById('leaderboardSubtitle');
+    if (subtitle) {
+        if (sortType === 'points') {
+            subtitle.textContent = 'Sorted by Points';
+        } else if (sortType === 'cards') {
+            subtitle.textContent = 'Sorted by Cards (Y|R)';
+        } else if (sortType === 'gd') {
+            subtitle.textContent = 'Sorted by Goal Difference';
+        }
+    }
+    
+    // Re-render stats to update active state
+    await renderLeaderboardStats();
+    
+    renderLeagueTable();
+}
+
+async function renderLeaderboardStats() {
+    const stats = await calculateLeaderboardStats();
+    const statsContainer = document.getElementById('leaderboardStats');
+    if (!statsContainer) return;
+    
+    // Calculate most points
+    const leagueData = calculateLeagueTable();
+    let mostPointsOwner = null;
+    let mostPoints = 0;
+    Object.entries(leagueData).forEach(([player, data]) => {
+        if (data.points > mostPoints) {
+            mostPoints = data.points;
+            mostPointsOwner = player;
+        }
+    });
+    
+    let html = '<div class="stats-grid">';
+    
+    // Most Points - clickable to sort by points (default)
+    const pointsActive = leaderboardSortState === 'points' ? ' active' : '';
+    html += `<div class="stat-box${pointsActive}" onclick="sortLeaderboard('points')" style="cursor: pointer;" title="Click to sort by points">`;
+    html += '<h3>Most Points</h3>';
+    if (mostPointsOwner) {
+        html += `<div class="stat-value">${mostPoints}</div>`;
+        html += `<div class="stat-detail">${mostPointsOwner}</div>`;
+    } else {
+        html += '<div class="stat-value">-</div>';
+        html += '<div class="stat-detail">No matches yet</div>';
+    }
+    html += '</div>';
+    
+    // Fastest Goal
+    html += '<div class="stat-box">';
+    html += '<h3>Fastest Goal</h3>';
+    if (stats.fastestGoal.owner && stats.fastestGoal.minute !== Infinity) {
+        html += `<div class="stat-value">${stats.fastestGoal.minute}'</div>`;
+        html += `<div class="stat-detail">${stats.fastestGoal.owner}</div>`;
+        const playerInfo = stats.fastestGoal.player ? `${stats.fastestGoal.player} - ` : '';
+        html += `<div class="stat-subdetail">${playerInfo}${stats.fastestGoal.team}</div>`;
+    } else {
+        html += '<div class="stat-value">-</div>';
+        html += '<div class="stat-detail">No goals yet</div>';
+    }
+    html += '</div>';
+    
+    // Fastest Card Received
+    html += '<div class="stat-box">';
+    html += '<h3>Fastest Card Received</h3>';
+    if (stats.fastestCard.owner && stats.fastestCard.minute !== Infinity) {
+        html += `<div class="stat-value">${stats.fastestCard.minute}'</div>`;
+        html += `<div class="stat-detail">${stats.fastestCard.owner}</div>`;
+        html += `<div class="stat-subdetail">${stats.fastestCard.player} - ${stats.fastestCard.team}</div>`;
+    } else {
+        html += '<div class="stat-value">-</div>';
+        html += '<div class="stat-detail">No cards yet</div>';
+    }
+    html += '</div>';
+    
+    // Most Cards - clickable to sort by cards
+    const cardsActive = leaderboardSortState === 'cards' ? ' active' : '';
+    html += `<div class="stat-box${cardsActive}" onclick="sortLeaderboard('cards')" style="cursor: pointer;" title="Click to sort by cards">`;
+    html += '<h3>Most Cards (Group)</h3>';
+    if (stats.mostCards.owner) {
+        html += `<div class="stat-value">${stats.mostCards.total}</div>`;
+        html += `<div class="stat-detail">${stats.mostCards.owner}</div>`;
+        html += `<div class="stat-subdetail">${stats.mostCards.yellow}Y, ${stats.mostCards.red}R (${stats.mostCards.straightRed} straight)</div>`;
+    } else {
+        html += '<div class="stat-value">-</div>';
+        html += '<div class="stat-detail">No cards yet</div>';
+    }
+    html += '</div>';
+    
+    // Worst Goal Difference - clickable to sort by GD
+    const gdActive = leaderboardSortState === 'gd' ? ' active' : '';
+    html += `<div class="stat-box${gdActive}" onclick="sortLeaderboard('gd')" style="cursor: pointer;" title="Click to sort by goal difference">`;
+    html += '<h3>Worst Goal Difference</h3>';
+    if (stats.worstGD.owner && stats.worstGD.gd !== Infinity) {
+        html += `<div class="stat-value">${stats.worstGD.gd > 0 ? '+' : ''}${stats.worstGD.gd}</div>`;
+        html += `<div class="stat-detail">${stats.worstGD.owner}</div>`;
+    } else {
+        html += '<div class="stat-value">-</div>';
+        html += '<div class="stat-detail">No matches yet</div>';
+    }
+    html += '</div>';
+    
+    html += '</div>';
+    statsContainer.innerHTML = html;
 }
 
 // Get qualified teams from groups
@@ -950,12 +1494,12 @@ function getKnockoutMatchData() {
     
     // Process all knockout matches from the API
     matches.forEach(match => {
-        if (match.round !== 'group' && match.matchNum) {
+        if (match.type !== 'group' && match.matchNum) {
             const matchNum = match.matchNum;
             
             // Check if match is actually live (kickoff to 2 hours after)
             let isActuallyLive = false;
-            if (match.status === 'LIVE' && match.date) {
+            if (match.isLive && match.date) {
                 try {
                     const [datePart, timePart] = match.date.split(' ');
                     const [month, day, year] = datePart.split('/');
@@ -976,7 +1520,7 @@ function getKnockoutMatchData() {
                 score1: match.score1,
                 score2: match.score2,
                 isLive: isActuallyLive,
-                isCompleted: match.status === 'FT',
+                isCompleted: match.finished,
                 // TODO: Add penalty data when available from API
                 penalties1: null,
                 penalties2: null
@@ -1278,32 +1822,327 @@ function calculateNextRoundMatches(previousRoundMatches, startingMatchNum) {
 
 // Render fixtures (placeholder for future implementation)
 function renderFixtures() {
-    // Fixtures will be populated when match data is available
     const fixturesContainer = document.getElementById('fixturesContainer');
-    if (fixturesContainer) {
-        fixturesContainer.innerHTML = '<p>Fixtures will be displayed here when available.</p>';
+    if (!fixturesContainer) return;
+    
+    // Get current selected player from search (if search element exists)
+    const playerSearchElement = document.getElementById('playerSearch');
+    const selectedPlayer = playerSearchElement ? playerSearchElement.value.trim() : '';
+    
+    // Filter matches to only group stage games
+    const groupStageMatches = matches.filter(m => m.type === 'group');
+    
+    if (groupStageMatches.length === 0) {
+        fixturesContainer.innerHTML = '<p>No fixtures available yet.</p>';
+        return;
+    }
+    
+    // Sort matches chronologically by date
+    const sortedMatches = [...groupStageMatches].sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA - dateB;
+    });
+    
+    // Determine matchday based on match number (1-24 = MD1, 25-48 = MD2, 49-72 = MD3)
+    const getMatchday = (matchNum) => {
+        if (matchNum <= 24) return 1;
+        if (matchNum <= 48) return 2;
+        return 3;
+    };
+    
+    // Group matches by actual calendar day
+    const matchesByDay = {};
+    sortedMatches.forEach(match => {
+        const matchDate = new Date(match.date);
+        const dateKey = matchDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        if (!matchesByDay[dateKey]) {
+            matchesByDay[dateKey] = [];
+        }
+        matchesByDay[dateKey].push(match);
+    });
+    
+    // Build HTML
+    let html = '';
+    let mostRecentFinishedMatch = null;
+    
+    // Sort days chronologically
+    const sortedDays = Object.keys(matchesByDay).sort();
+    
+    // Define accent colors array
+    const accentColors = ['cyan', 'purple', 'lime', 'orange', 'blue', 'pink', 'gold', 'green', 'tomato', 'orchid', 'sky', 'hotpink'];
+    
+    sortedDays.forEach(dateKey => {
+        const dayMatches = matchesByDay[dateKey];
+        
+        // Pick one random accent color for this entire day
+        const dayAccent = accentColors[Math.floor(Math.random() * accentColors.length)];
+        
+        // Filter matches if a player is selected
+        let filteredMatches = dayMatches;
+        if (selectedPlayer && players[selectedPlayer]) {
+            const playerTeams = players[selectedPlayer].teams;
+            filteredMatches = dayMatches.filter(m =>
+                playerTeams.includes(m.team1) || playerTeams.includes(m.team2)
+            );
+        }
+        
+        // Skip this day if no matches after filtering
+        if (filteredMatches.length === 0) return;
+        
+        // Format the date header
+        const headerDate = new Date(dateKey + 'T12:00:00');
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayName = dayNames[headerDate.getDay()];
+        const day = headerDate.getDate();
+        const month = monthNames[headerDate.getMonth()];
+        const year = headerDate.getFullYear();
+        
+        // Check if this day has any unfinished matches
+        const hasUnfinishedMatches = filteredMatches.some(m => !m.finished);
+        const dayColor = hasUnfinishedMatches ? dayAccent : 'grey';
+        
+        html += `<div class="matchday-section" data-accent="${dayColor}">`;
+        html += `<h3 class="matchday-header">${dayName}, ${month} ${day}, ${year}</h3>`;
+        html += `<div class="fixtures-list">`;
+        
+        filteredMatches.forEach(match => {
+            const homeOwner = findOwner(match.team1);
+            const awayOwner = findOwner(match.team2);
+            const matchDate = new Date(match.date);
+            
+            // Format: "HH:MM DDD DD/MM" (time first, 3-letter day, DD/MM)
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dayName = dayNames[matchDate.getDay()];
+            const day = String(matchDate.getDate()).padStart(2, '0');
+            const month = String(matchDate.getMonth() + 1).padStart(2, '0');
+            const hours = String(matchDate.getHours()).padStart(2, '0');
+            const minutes = String(matchDate.getMinutes()).padStart(2, '0');
+            const dateStr = `${hours}:${minutes} ${dayName} ${day}/${month}`;
+            
+            const isFinished = match.finished;
+            const isLive = match.isLive;
+            const stadium = getStadiumName(match.stadium);
+            
+            // Track most recent finished match for auto-scroll
+            const now = new Date();
+            if (isFinished && (!mostRecentFinishedMatch || matchDate > new Date(mostRecentFinishedMatch.date))) {
+                mostRecentFinishedMatch = match;
+            }
+            const isNext = !isFinished && !isLive && matchDate > now;
+            const scrollId = (isLive || isNext) ? 'id="next-match"' : (mostRecentFinishedMatch && match.matchNum === mostRecentFinishedMatch.matchNum) ? 'id="recent-match"' : '';
+            
+            // Use grey for finished matches, day color for upcoming/live matches
+            const fixtureColor = isFinished ? 'grey' : dayColor;
+            html += `<div class="fixture-item ${isFinished ? 'finished' : ''} ${isLive ? 'live' : ''}" ${scrollId} data-home="${match.team1}" data-away="${match.team2}" data-accent="${fixtureColor}" onclick="toggleBoxScore(this)">`;
+            html += `<div class="fixture-date">${dateStr}</div>`;
+            html += `<div class="fixture-match">`;
+            html += `<div class="fixture-team">`;
+            html += `<span class="team-code">${match.team1}</span>`;
+            html += `<span class="team-owner">${homeOwner}</span>`;
+            html += `</div>`;
+            html += `<div class="fixture-score">`;
+            if (isFinished || isLive) {
+                html += `<span class="score">${match.score1} - ${match.score2}</span>`;
+                if (isLive) html += `<span class="live-badge">LIVE</span>`;
+            } else {
+                html += `<span class="vs">vs</span>`;
+            }
+            html += `</div>`;
+            html += `<div class="fixture-team">`;
+            html += `<span class="team-code">${match.team2}</span>`;
+            html += `<span class="team-owner">${awayOwner}</span>`;
+            html += `</div>`;
+            html += `</div>`;
+            html += `<div class="fixture-venue">`;
+            html += `<div class="fixture-stadium">${stadium}</div>`;
+            html += `<div class="fixture-group">Group ${match.group}</div>`;
+            html += `</div>`;
+            
+            // Add box score for finished matches
+            if (isFinished) {
+                html += `<div class="box-score" style="display: none;">`;
+                html += `<div class="box-score-content">`;
+                
+                // Score summary
+                html += `<div class="score-summary">`;
+                html += `<div class="score-team">`;
+                html += `<span class="score-team-name">${match.team1}</span>`;
+                html += `<span class="score-team-score">${match.score1}</span>`;
+                html += `</div>`;
+                html += `<div class="score-divider">-</div>`;
+                html += `<div class="score-team">`;
+                html += `<span class="score-team-score">${match.score2}</span>`;
+                html += `<span class="score-team-name">${match.team2}</span>`;
+                html += `</div>`;
+                html += `</div>`;
+                
+                // Helper function to create stat row with simple bars
+                const createStatRow = (label, val1, val2) => {
+                    const total = val1 + val2;
+                    const percent1 = total > 0 ? (val1 / total) * 100 : 50;
+                    const percent2 = total > 0 ? (val2 / total) * 100 : 50;
+                    
+                    return `
+                        <div class="stat-row">
+                            <span class="stat-label">${label}</span>
+                            <div class="stat-bars">
+                                <div class="stat-bar-left">
+                                    <span class="stat-number">${val1}</span>
+                                    <div class="stat-bar-fill" style="width: ${percent1}%;"></div>
+                                </div>
+                                <div class="stat-bar-right">
+                                    <div class="stat-bar-fill" style="width: ${percent2}%;"></div>
+                                    <span class="stat-number">${val2}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+                
+                // Match statistics
+                html += `<div class="match-stats">`;
+                
+                // Generate random stats
+                const possession1 = Math.floor(Math.random() * 20 + 40);
+                const possession2 = 100 - possession1;
+                const shots1 = Math.floor(Math.random() * 10 + 5);
+                const shots2 = Math.floor(Math.random() * 10 + 5);
+                const shotsOnTarget1 = Math.floor(Math.random() * 5 + 2);
+                const shotsOnTarget2 = Math.floor(Math.random() * 5 + 2);
+                const corners1 = Math.floor(Math.random() * 8 + 2);
+                const corners2 = Math.floor(Math.random() * 8 + 2);
+                const fouls1 = Math.floor(Math.random() * 10 + 5);
+                const fouls2 = Math.floor(Math.random() * 10 + 5);
+                
+                html += createStatRow('Possession', possession1, possession2);
+                html += createStatRow('Shots', shots1, shots2);
+                html += createStatRow('Shots on Target', shotsOnTarget1, shotsOnTarget2);
+                html += createStatRow('Corners', corners1, corners2);
+                html += createStatRow('Fouls', fouls1, fouls2);
+                
+                // Yellow cards
+                const homeYellows = teamStandings[match.team1]?.yellowCards || 0;
+                const awayYellows = teamStandings[match.team2]?.yellowCards || 0;
+                if (homeYellows > 0 || awayYellows > 0) {
+                    html += createStatRow('Yellow Cards', homeYellows, awayYellows);
+                }
+                
+                // Red cards
+                const homeReds = teamStandings[match.team1]?.redCards || 0;
+                const awayReds = teamStandings[match.team2]?.redCards || 0;
+                if (homeReds > 0 || awayReds > 0) {
+                    html += createStatRow('Red Cards', homeReds, awayReds);
+                }
+                
+                html += `</div>`; // match-stats
+                html += `</div>`; // box-score-content
+                html += `</div>`; // box-score
+            }
+            html += `</div>`;
+        });
+        
+        html += `</div></div>`;
+    });
+    
+    if (html === '') {
+        html = '<p>No fixtures found for the selected player.</p>';
+    }
+    
+    fixturesContainer.innerHTML = html;
+    
+    // Auto-scroll to most recent finished match, or next/live match if no finished matches
+    setTimeout(() => {
+        const recentMatch = document.getElementById('recent-match');
+        const nextMatch = document.getElementById('next-match');
+        const targetMatch = recentMatch || nextMatch;
+        if (targetMatch) {
+            targetMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 100);
+}
+
+// Toggle box score display when clicking on a fixture
+function toggleBoxScore(element) {
+    const boxScore = element.querySelector('.box-score');
+    
+    if (boxScore) {
+        const isVisible = boxScore.style.display !== 'none';
+        boxScore.style.display = isVisible ? 'none' : 'block';
     }
 }
 
 // Manual refresh function
-function manualRefresh() {
-    renderGroups();
-    renderLeagueTable();
-    renderThirdPlaceTeams();
-    alert('Data refreshed!');
+async function manualRefresh() {
+    const refreshBtn = document.querySelector('.refresh-btn');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = 'Refreshing...';
+    
+    try {
+        const newApiData = await loadAllAPIData();
+        if (newApiData && newApiData.groups) {
+            matches = newApiData.matches || [];
+            liveGroups = newApiData.groups || {};
+            
+            // Update teamStandings
+            teamStandings = {};
+            for (const [groupName, teams] of Object.entries(newApiData.groups)) {
+                teams.forEach(team => {
+                    teamStandings[team.team] = {
+                        team: team.team,
+                        played: team.played,
+                        won: team.won,
+                        drawn: team.drawn,
+                        lost: team.lost,
+                        goalsFor: team.goalsFor,
+                        goalsAgainst: team.goalsAgainst,
+                        points: team.points,
+                        yellowCards: team.yellowCards || 0,
+                        redCards: team.redCards || 0
+                    };
+                });
+            }
+            
+            knockoutMatchData = getKnockoutMatchData();
+            renderGroups();
+            renderLeagueTable();
+            await renderLeaderboardStats();
+            renderThirdPlaceTeams();
+            renderKnockoutBracket();
+            renderFixtures();
+            
+            // Update last updated time
+            const now = new Date().toLocaleString('en-IE', {
+                timeZone: 'Europe/Dublin',
+                dateStyle: 'short',
+                timeStyle: 'short'
+            });
+            document.getElementById('lastUpdated').innerHTML = `
+                <strong>Data refreshed from API</strong><br>
+                <span style="font-size: 11px; opacity: 0.8;">${now}</span>
+            `;
+            
+            console.log('🔄 Manual refresh completed at', new Date().toLocaleTimeString());
+        } else {
+            alert('Failed to refresh data from API. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error during manual refresh:', error);
+        alert('Error refreshing data. Please try again.');
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = 'Refresh';
+    }
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load version info, card data and live data in parallel
-    const [versionInfo, liveData, cards] = await Promise.all([
+    // Load version info and API data in parallel
+    const [versionInfo, apiData] = await Promise.all([
         loadVersionInfo(),
-        loadLiveData(),
-        loadCardData()
+        loadAllAPIData()
     ]);
-    
-    // Store card data globally
-    cardData = cards;
     
     // Display version info
     if (versionInfo) {
@@ -1317,17 +2156,57 @@ document.addEventListener('DOMContentLoaded', async () => {
             <strong>Latest Update:</strong> ${versionInfo.message}<br>
             <span style="font-size: 11px; opacity: 0.8;">Commit ${versionInfo.commit} • ${timeStr}</span>
         `;
+    } else {
+        // Show last data update from API
+        const now = new Date().toLocaleString('en-IE', {
+            timeZone: 'Europe/Dublin',
+            dateStyle: 'short',
+            timeStyle: 'short'
+        });
+        document.getElementById('lastUpdated').innerHTML = `
+            <strong>Data loaded from API</strong><br>
+            <span style="font-size: 11px; opacity: 0.8;">${now}</span>
+        `;
     }
     
-    // Use live data if available
-    if (liveData) {
-        matches = liveData.matches || [];
-        liveGroups = liveData.groups || {};
-        console.log('✅ Loaded data:', matches.length, 'matches');
+    // Use API data
+    if (apiData && apiData.groups) {
+        // Use group standings from API
+        liveGroups = apiData.groups;
+        matches = apiData.matches || [];
+        console.log('✅ Loaded group standings from API');
         
-        // Calculate standings from match results (now includes card data)
-        teamStandings = calculateStandings();
-        console.log('📊 Calculated standings for', Object.keys(teamStandings).length, 'teams');
+        cardData = await loadCardData();
+
+        // Convert API format to teamStandings format and merge scraped card totals
+        teamStandings = {};
+        for (const [groupName, teams] of Object.entries(apiData.groups)) {
+            teams.forEach(team => {
+                const teamCards = cardData[team.team] || { yellow: 0, red: 0 };
+                const totalCards = teamCards.yellow + teamCards.red;
+                teamStandings[team.team] = {
+                    team: team.team,
+                    played: team.played,
+                    won: team.won,
+                    drawn: team.drawn,
+                    lost: team.lost,
+                    goalsFor: team.goalsFor,
+                    goalsAgainst: team.goalsAgainst,
+                    points: team.points,
+                    yellowCards: teamCards.yellow,
+                    redCards: teamCards.red,
+                    conductScore: -totalCards  // Fewer cards = higher score
+                };
+            });
+        }
+        console.log('📊 Loaded standings for', Object.keys(teamStandings).length, 'teams from API');
+    } else {
+        console.error('❌ Failed to load API data');
+        document.getElementById('lastUpdated').innerHTML = `
+            <strong style="color: #ff4444;">Error loading data from API</strong><br>
+            <span style="font-size: 11px; opacity: 0.8;">Please refresh the page</span>
+        `;
+        return;
     }
     
     // Refresh knockout match data from loaded matches
@@ -1336,29 +2215,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render all components
     renderGroups();
     renderLeagueTable();
+    await renderLeaderboardStats();
     renderThirdPlaceTeams();
     renderKnockoutBracket();
     renderFixtures();
     
-    // Auto-refresh every 5 minutes
+    // Auto-refresh every 2 minutes (API data updates frequently)
     setInterval(async () => {
-        const [newData, newCards] = await Promise.all([
-            loadLiveData(),
-            loadCardData()
-        ]);
-        if (newData) {
-            matches = newData.matches || [];
-            liveGroups = newData.groups || {};
-            cardData = newCards;
-            teamStandings = calculateStandings();
+        const newApiData = await loadAllAPIData();
+        if (newApiData && newApiData.groups) {
+            matches = newApiData.matches || [];
+            liveGroups = newApiData.groups || {};
+            cardData = await loadCardData();
+            
+            // Update teamStandings with scraped card totals
+            teamStandings = {};
+            for (const [groupName, teams] of Object.entries(newApiData.groups)) {
+                teams.forEach(team => {
+                    const teamCards = cardData[team.team] || { yellow: 0, red: 0 };
+                    const totalCards = teamCards.yellow + teamCards.red;
+                    teamStandings[team.team] = {
+                        team: team.team,
+                        played: team.played,
+                        won: team.won,
+                        drawn: team.drawn,
+                        lost: team.lost,
+                        goalsFor: team.goalsFor,
+                        goalsAgainst: team.goalsAgainst,
+                        points: team.points,
+                        yellowCards: teamCards.yellow,
+                        redCards: teamCards.red,
+                        conductScore: -totalCards  // Fewer cards = higher score
+                    };
+                });
+            }
+            
             knockoutMatchData = getKnockoutMatchData(); // Refresh knockout data
             renderGroups();
             renderLeagueTable();
+            await renderLeaderboardStats();
             renderThirdPlaceTeams();
             renderKnockoutBracket();
-            console.log('🔄 Auto-refreshed at', new Date().toLocaleTimeString());
+            renderFixtures();
+            console.log('🔄 Auto-refreshed from API at', new Date().toLocaleTimeString());
         }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 2 * 60 * 1000); // 2 minutes
 });
 
 // Made with Bob

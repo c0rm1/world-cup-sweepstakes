@@ -1,42 +1,64 @@
 #!/usr/bin/env python3
 """
 Enrich card data with team and match information
-Uses worldcup-data.json to match players to teams
+Uses match data to match players to teams
 """
 
 import json
 import csv
-from difflib import get_close_matches
+from pathlib import Path
 
-# Load match data
-with open('data/worldcup-data.json', 'r') as f:
-    match_data = json.load(f)
+MATCH_DATA_CANDIDATES = [
+    Path('data/worldcup-data.json'),
+    Path('data/games.json')
+]
 
-# Load card data
+def load_match_data():
+    for path in MATCH_DATA_CANDIDATES:
+        if not path.exists():
+            continue
+
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        if path.name == 'games.json':
+            games = data.get('games', [])
+            normalized_matches = []
+            for game in games:
+                normalized_matches.append({
+                    'team1': game.get('home_team_code') or game.get('home_team_name_en') or game.get('home_team_label'),
+                    'team2': game.get('away_team_code') or game.get('away_team_name_en') or game.get('away_team_label'),
+                    'home_scorers': game.get('home_scorers', ''),
+                    'away_scorers': game.get('away_scorers', ''),
+                    'status': 'FT' if game.get('finished') == 'TRUE' else game.get('time_elapsed'),
+                    'date': game.get('local_date', '')
+                })
+            return {'matches': normalized_matches}
+
+        return data
+
+    raise FileNotFoundError('No supported match data file found')
+
+match_data = load_match_data()
+
 cards = []
-with open('data/worldcup-cards.csv', 'r') as f:
+with open('data/worldcup-cards.csv', 'r', encoding='utf-8') as f:
     reader = csv.DictReader(f)
     cards = list(reader)
 
-# Build player-to-team mapping from match scorers
 player_team_map = {}
 
 for match in match_data['matches']:
     team1 = match['team1']
     team2 = match['team2']
-    
-    # Extract player names from scorers
-    for scorer_field, team in [(match.get('home_scorers', ''), team1), 
-                                (match.get('away_scorers', ''), team2)]:
+
+    for scorer_field, team in [(match.get('home_scorers', ''), team1), (match.get('away_scorers', ''), team2)]:
         if scorer_field and scorer_field != 'null':
-            # Parse scorer strings like '{"Nestory Irankunda 27'","C. Metcalfe 75'"}'
             scorer_field = scorer_field.replace('{', '').replace('}', '').replace('"', '')
             scorers = scorer_field.split(',')
             for scorer in scorers:
-                # Extract name (before the minute)
                 name_match = scorer.strip().split("'")[0].strip()
                 if name_match:
-                    # Get last name for matching
                     parts = name_match.split()
                     if len(parts) > 0:
                         last_name = parts[-1]
@@ -44,10 +66,7 @@ for match in match_data['matches']:
 
 print(f"Built player-team map with {len(player_team_map)} entries")
 
-# Common player last names to team mapping (from known World Cup squads)
-# This helps with players who haven't scored
 known_players = {
-    # Group A - Mexico, South Africa, South Korea, Czech Republic
     'montes': 'MEX',
     'gutiérrez': 'MEX',
     'sibisi': 'RSA',
@@ -56,8 +75,6 @@ known_players = {
     'zwane': 'RSA',
     'gi-hyuk': 'KOR',
     'lee': 'KOR',
-    
-    # Group B - Canada, Bosnia, Qatar, Switzerland
     'johnston': 'CAN',
     'katić': 'BIH',
     'demirović': 'BIH',
@@ -65,19 +82,13 @@ known_players = {
     'abunada': 'QAT',
     'gaber': 'QAT',
     'zakaria': 'SUI',
-    
-    # Group C - Brazil, Morocco, Haiti, Scotland
     'ibañez': 'BRA',
     'casemiro': 'BRA',
     'bellegarde': 'HAI',
     'hickey': 'SCO',
     'mclean': 'SCO',
     'curtis': 'SCO',
-    
-    # Group D - Australia, Turkey, Germany, Curaçao
-    'fougerolles': 'CUW',
-    
-    # Group E - USA, Paraguay, Ivory Coast, Ecuador
+    'fougerolles': 'CAN',
     'adams': 'USA',
     'cáceres': 'PAR',
     'alonso': 'PAR',
@@ -89,67 +100,55 @@ known_players = {
     'kessié': 'CIV',
     'fofana': 'CIV',
     'porozo': 'ECU',
-    
-    # Group F - Netherlands, Japan, Sweden, Tunisia
-    'van de ven': 'NED',
+    'van': 'NED',
     'ven': 'NED',
     'summerville': 'NED',
     'depay': 'NED',
     'khedira': 'TUN',
 }
 
-# Enrich cards
 enriched_cards = []
-seen = set()  # Track duplicates
+seen = set()
 
 for card in cards:
     player = card['player']
-    
-    # Skip if we've seen this exact card
     card_key = f"{player}_{card['card_type']}_{card['minute']}"
     if card_key in seen:
         continue
     seen.add(card_key)
-    
-    # Try to find team
+
     team = card['team']
     if not team:
-        # Try last name matching
         parts = player.split()
         if parts:
             last_name = parts[-1].lower()
-            
-            # Check known players first
             if last_name in known_players:
                 team = known_players[last_name]
-            # Then check scorer map
             elif last_name in player_team_map:
                 team = player_team_map[last_name]
-    
-    # Try to find match
+
     match_name = card['match']
     match_date = card['date']
-    
+
     if not match_name and team:
-        # Find matches involving this team
         for match in match_data['matches']:
             if match['status'] == 'FT' and (match['team1'] == team or match['team2'] == team):
                 match_name = f"{match['team1']} vs {match['team2']}"
                 match_date = match.get('date', '')
                 break
-    
+
     enriched_cards.append({
         'match': match_name,
         'date': match_date,
         'team': team,
         'player': player,
         'card_type': card['card_type'],
-        'minute': card['minute']
+        'minute': card['minute'],
+        'discipline_score': card.get('discipline_score', 0)
     })
 
-# Save enriched data
 with open('data/worldcup-cards-enriched.csv', 'w', newline='', encoding='utf-8') as f:
-    writer = csv.DictWriter(f, fieldnames=['match', 'date', 'team', 'player', 'card_type', 'minute'])
+    writer = csv.DictWriter(f, fieldnames=['match', 'date', 'team', 'player', 'card_type', 'minute', 'discipline_score'])
     writer.writeheader()
     writer.writerows(enriched_cards)
 
@@ -157,7 +156,6 @@ print(f"\n✅ Saved {len(enriched_cards)} enriched cards (removed {len(cards) - 
 print(f"   Cards with team info: {sum(1 for c in enriched_cards if c['team'])}")
 print(f"   Cards with match info: {sum(1 for c in enriched_cards if c['match'])}")
 
-# Show sample
 print("\nSample enriched data:")
 for card in enriched_cards[:10]:
     print(f"  {card['match'] or 'Unknown'} - {card['team'] or '?'}: {card['player']} ({card['card_type']} {card['minute']}')")

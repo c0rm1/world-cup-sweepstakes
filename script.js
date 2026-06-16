@@ -681,7 +681,7 @@ function renderGroups() {
                         <th>GA</th>
                         <th>GD</th>
                         <th>Pts</th>
-                        <th title="Discipline: Yellow|Red">Y|R</th>
+                        <th title="Discipline Score (FIFA Fair Play)">DS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -692,7 +692,8 @@ function renderGroups() {
             const gdDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
             const yellowCards = teamData.yellowCards || 0;
             const redCards = teamData.redCards || 0;
-            const disciplineDisplay = `${yellowCards}|${redCards}`;
+            const disciplineScore = teamData.conductScore || 0;
+            const disciplineDisplay = disciplineScore;
             
             tableHTML += `
                 <tr data-owner="${teamData.owner}">
@@ -707,7 +708,7 @@ function renderGroups() {
                     <td>${teamData.goalsAgainst}</td>
                     <td>${gdDisplay}</td>
                     <td><strong>${teamData.points}</strong></td>
-                    <td><span class="discipline-cell" title="${yellowCards} Yellow, ${redCards} Red">${disciplineDisplay}</span></td>
+                    <td><span class="discipline-cell" title="Discipline Score: ${disciplineScore} (${yellowCards}Y, ${redCards}R)">${disciplineDisplay}</span></td>
                 </tr>
             `;
         });
@@ -930,7 +931,8 @@ function renderThirdPlaceTeams() {
         const gdDisplay = goalDiff > 0 ? `+${goalDiff}` : goalDiff;
         const yellowCards = teamData.yellowCards || 0;
         const redCards = teamData.redCards || 0;
-        const disciplineDisplay = `${yellowCards}|${redCards}`;
+        const disciplineScore = teamData.conductScore || 0;
+        const disciplineDisplay = disciplineScore;
         
         const row = document.createElement('tr');
         
@@ -950,7 +952,7 @@ function renderThirdPlaceTeams() {
             <td>${teamData.goalsFor}</td>
             <td>${teamData.goalsAgainst}</td>
             <td>${gdDisplay}</td>
-            <td><span class="discipline-cell" title="${yellowCards} Yellow, ${redCards} Red">${disciplineDisplay}</span></td>
+            <td><span class="discipline-cell" title="Discipline Score: ${disciplineScore} (${yellowCards}Y, ${redCards}R)">${disciplineDisplay}</span></td>
             <td><strong>${teamData.points}</strong></td>
         `;
         tbody.appendChild(row);
@@ -1298,7 +1300,7 @@ async function sortLeaderboard(sortType) {
         if (sortType === 'points') {
             subtitle.textContent = 'Sorted by Points';
         } else if (sortType === 'cards') {
-            subtitle.textContent = 'Sorted by Cards (Y|R)';
+            subtitle.textContent = 'Sorted by Discipline Score';
         } else if (sortType === 'gd') {
             subtitle.textContent = 'Sorted by Goal Difference';
         }

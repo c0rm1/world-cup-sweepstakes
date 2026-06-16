@@ -192,8 +192,25 @@ async function loadCardData() {
             const line = lines[i].trim();
             if (!line) continue;
             
-            const parts = line.split(',');
-            if (parts.length < 6) continue;
+            // Parse CSV properly handling quoted fields
+            const parts = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    parts.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            parts.push(current); // Add the last field
+            
+            if (parts.length < 7) continue;
             
             const team = parts[2];
             const cardType = parts[4];
@@ -214,6 +231,7 @@ async function loadCardData() {
         }
         
         console.log('✅ Card data loaded for', Object.keys(cardData).length, 'teams');
+        console.log('Sample card data:', Object.entries(cardData).slice(0, 5));
         return cardData;
     } catch (error) {
         console.warn('Could not load card data:', error);
@@ -1062,8 +1080,25 @@ async function calculateLeaderboardStats() {
                 const line = lines[i].trim();
                 if (!line) continue;
                 
-                const parts = line.split(',');
-                if (parts.length < 6) continue;
+                // Parse CSV properly handling quoted fields
+                const parts = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        parts.push(current);
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                parts.push(current); // Add the last field
+                
+                if (parts.length < 7) continue;
                 
                 const match = parts[0];
                 const team = parts[2];

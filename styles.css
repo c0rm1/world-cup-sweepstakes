@@ -100,6 +100,17 @@ h1, h2, h3, h4, h5, h6,
     font-weight: 700;
 }
 
+.nav-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: #888888;
+}
+
+.nav-item.disabled:hover {
+    background: transparent;
+    transform: none;
+}
+
 .nav-item .icon {
     font-size: 1.1rem;
 }
@@ -964,3 +975,505 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* Made with Bob */
+
+/* Stats Grid for Leaderboard */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-box {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border: 2px solid #00CED1;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-width 0.3s ease;
+}
+
+.stat-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 206, 209, 0.3);
+}
+
+.stat-box.active {
+    transform: scale(1.08);
+    border: 3px solid #00CED1;
+    box-shadow: 0 0 25px rgba(0, 206, 209, 0.6), 0 0 50px rgba(0, 206, 209, 0.4);
+}
+
+.stat-box h3 {
+    font-size: 1rem;
+    color: #00CED1;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 0.5rem;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.stat-detail {
+    font-size: 1.1rem;
+    color: #FFFFFF;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.stat-subdetail {
+    font-size: 0.85rem;
+    color: #999999;
+}
+
+/* Fixtures Styles */
+.matchday-section {
+    margin-bottom: 2rem;
+}
+
+.matchday-header {
+    font-size: 1.3rem;
+    color: #00CED1;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #00CED1;
+    font-weight: 600;
+}
+
+/* Matchday header colors based on accent */
+.matchday-section[data-accent="cyan"] .matchday-header { color: #00CED1; border-bottom-color: #00CED1; }
+.matchday-section[data-accent="purple"] .matchday-header { color: #9370DB; border-bottom-color: #9370DB; }
+.matchday-section[data-accent="lime"] .matchday-header { color: #ADFF2F; border-bottom-color: #ADFF2F; }
+.matchday-section[data-accent="orange"] .matchday-header { color: #FF4500; border-bottom-color: #FF4500; }
+.matchday-section[data-accent="blue"] .matchday-header { color: #1E90FF; border-bottom-color: #1E90FF; }
+.matchday-section[data-accent="pink"] .matchday-header { color: #FF1493; border-bottom-color: #FF1493; }
+.matchday-section[data-accent="gold"] .matchday-header { color: #FFD700; border-bottom-color: #FFD700; }
+.matchday-section[data-accent="green"] .matchday-header { color: #00FF7F; border-bottom-color: #00FF7F; }
+.matchday-section[data-accent="tomato"] .matchday-header { color: #FF6347; border-bottom-color: #FF6347; }
+.matchday-section[data-accent="orchid"] .matchday-header { color: #BA55D3; border-bottom-color: #BA55D3; }
+.matchday-section[data-accent="sky"] .matchday-header { color: #00BFFF; border-bottom-color: #00BFFF; }
+.matchday-section[data-accent="hotpink"] .matchday-header { color: #FF69B4; border-bottom-color: #FF69B4; }
+
+/* Grey styling for finished match days */
+.matchday-section[data-accent="grey"] .matchday-header { color: #666666; border-bottom-color: #666666; }
+
+.fixtures-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Sort buttons for group tables */
+.sort-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    justify-content: center;
+}
+
+.sort-btn {
+    padding: 0.4rem 0.8rem;
+    background: #2a2a2a;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sort-btn:hover {
+    background: #333333;
+    border-color: #00CED1;
+    transform: translateY(-1px);
+}
+
+.sort-btn.active {
+    background: #00CED1;
+    border-color: #00CED1;
+    color: #000000;
+}
+
+/* Discipline cell styling */
+.discipline-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #FFFFFF;
+}
+
+.fixture-item {
+    background: #1a1a1a;
+    border: 2px solid #333333;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Random accent colors for fixtures */
+.fixture-item[data-accent="cyan"] { border-color: #00CED1; }
+.fixture-item[data-accent="purple"] { border-color: #9370DB; }
+.fixture-item[data-accent="lime"] { border-color: #ADFF2F; }
+.fixture-item[data-accent="orange"] { border-color: #FF4500; }
+.fixture-item[data-accent="blue"] { border-color: #1E90FF; }
+.fixture-item[data-accent="pink"] { border-color: #FF1493; }
+.fixture-item[data-accent="gold"] { border-color: #FFD700; }
+.fixture-item[data-accent="green"] { border-color: #00FF7F; }
+.fixture-item[data-accent="tomato"] { border-color: #FF6347; }
+.fixture-item[data-accent="orchid"] { border-color: #BA55D3; }
+.fixture-item[data-accent="sky"] { border-color: #00BFFF; }
+.fixture-item[data-accent="hotpink"] { border-color: #FF69B4; }
+
+.fixture-item::before,
+.fixture-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+    opacity: 0.9;
+    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.fixture-item::before {
+    left: 0;
+    border-radius: 6px 0 0 6px;
+}
+
+.fixture-item::after {
+    right: 0;
+    border-radius: 0 6px 6px 0;
+}
+
+.fixture-item:hover {
+    border-color: #00CED1;
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 206, 209, 0.2);
+}
+
+/* Team kit color stripes using CSS custom properties */
+.fixture-item::before {
+    background: var(--home-jersey, #CCCCCC);
+}
+
+.fixture-item::after {
+    background: var(--away-jersey, #CCCCCC);
+}
+
+.fixture-item.finished {
+    opacity: 0.5;
+}
+
+.fixture-item.finished,
+.fixture-item[data-accent="grey"] {
+    border-color: #666666 !important;
+}
+
+.fixture-item.finished::before,
+.fixture-item.finished::after {
+    opacity: 0.3;
+}
+
+.fixture-item.live {
+    border-color: #FF4444;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a1a1a 100%);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(255, 68, 68, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.6); }
+}
+
+.fixture-date {
+    font-size: 0.75rem;
+    color: #999999;
+    margin-bottom: 0.4rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+.fixture-match {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+}
+
+.fixture-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    flex: 1;
+}
+
+.fixture-team .team-code {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.fixture-team .team-owner {
+    font-size: 0.7rem;
+    color: #00CED1;
+}
+
+.fixture-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 60px;
+}
+
+.fixture-score .score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.fixture-score .vs {
+    font-size: 0.8rem;
+    color: #666666;
+    font-weight: 600;
+}
+
+.fixture-score .live-badge {
+    font-size: 0.65rem;
+    color: #FF4444;
+    font-weight: 700;
+    background: rgba(255, 68, 68, 0.2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.fixture-group {
+    font-size: 0.7rem;
+    color: #666666;
+    text-align: center;
+}
+
+.fixture-venue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    margin-top: 0.3rem;
+}
+
+.fixture-stadium {
+    font-size: 0.7rem;
+    color: #00CED1;
+    font-weight: 500;
+}
+
+.fixture-group {
+    font-size: 0.7rem;
+    color: #666666;
+}
+
+.fun-fact {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #1a3a3a 0%, #2a2a2a 100%);
+    border-radius: 6px;
+    border-left: 3px solid #00CED1;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 200px;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+}
+
+.fun-fact-icon {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.fun-fact-text {
+    font-size: 0.9rem;
+    color: #CCCCCC;
+    line-height: 1.5;
+}
+
+#next-match {
+    border-color: #FFD700 !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.box-score {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #1a1a2a 0%, #2a2a2a 100%);
+    border-radius: 6px;
+    border-left: 3px solid #FFD700;
+    animation: slideDown 0.3s ease-out;
+}
+
+
+.box-score-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.score-summary {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 4px;
+}
+
+.score-team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.score-team-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    font-family: 'FIFA26', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.score-team-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #FFD700;
+    font-family: 'FIFA26', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.score-divider {
+    font-size: 1.2rem;
+    color: #666666;
+    font-weight: 700;
+}
+
+.match-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+    position: relative;
+}
+
+.stat-label {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85rem;
+    color: #FFD700;
+    font-weight: 600;
+    z-index: 2;
+    background: #1a1a2a;
+    padding: 0 0.5rem;
+}
+
+.stat-bars {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 0.25rem;
+}
+
+.stat-bar-left {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    background: transparent;
+}
+
+.stat-bar-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 0.5rem;
+    background: transparent;
+}
+
+.stat-bar-fill {
+    height: 20px;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    background: #666666; /* Default grey */
+}
+
+.stat-bar-left .stat-bar-fill {
+    /* Background set inline with kit colors */
+}
+
+/* Stat bar colors based on fixture accent */
+.fixture-item[data-accent="cyan"] .stat-bar-fill { background: #00CED1; }
+.fixture-item[data-accent="purple"] .stat-bar-fill { background: #9370DB; }
+.fixture-item[data-accent="lime"] .stat-bar-fill { background: #ADFF2F; }
+.fixture-item[data-accent="orange"] .stat-bar-fill { background: #FF4500; }
+.fixture-item[data-accent="blue"] .stat-bar-fill { background: #1E90FF; }
+.fixture-item[data-accent="pink"] .stat-bar-fill { background: #FF1493; }
+.fixture-item[data-accent="gold"] .stat-bar-fill { background: #FFD700; }
+.fixture-item[data-accent="green"] .stat-bar-fill { background: #00FF7F; }
+.fixture-item[data-accent="tomato"] .stat-bar-fill { background: #FF6347; }
+.fixture-item[data-accent="orchid"] .stat-bar-fill { background: #BA55D3; }
+.fixture-item[data-accent="sky"] .stat-bar-fill { background: #00BFFF; }
+.fixture-item[data-accent="hotpink"] .stat-bar-fill { background: #FF69B4; }
+
+/* Kit-style bars: thick jersey color with thin shorts and socks lines */
+.stat-bar-fill.kit-bar {
+    height: 24px;
+    border-radius: 4px;
+    position: relative;
+    opacity: 0.95;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    /* Jersey color is the main background (set inline) */
+    /* Shorts color is border-left/right (set inline) */
+    /* Socks color is border-bottom (set inline) */
+}
+
+.stat-number {
+    font-size: 0.9rem;
+    color: #FFFFFF;
+    font-weight: 700;
+    font-family: 'FIFA26', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-width: 30px;
+    text-align: center;
+}

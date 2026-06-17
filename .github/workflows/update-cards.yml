@@ -2,50 +2,97 @@ name: Update Card Data
 
 on:
   schedule:
-    # Run every 6 hours during the tournament (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: '0 0,6,12,18 * * *'
-  
-  # Allow manual trigger
+    - cron: '0 12 * * *'  # Run at 12:00 PM UTC every day
   workflow_dispatch:
 
 jobs:
   scrape-cards:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-      
+        uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
-      
+          python-version: '3.11'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
-      
+
+      - name: Decide whether scraper should run
+        id: should_run
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import datetime, timedelta, timezone
+
+          with open('data/games.json', 'r', encoding='utf-8') as f:
+              data = json.load(f)
+
+          now = datetime.now(timezone.utc)
+          should_run = False
+
+          for game in data.get('games', []):
+              if game.get('finished') != 'TRUE' and game.get('time_elapsed') != 'finished':
+                  continue
+
+              local_date = game.get('local_date')
+              if not local_date:
+                  continue
+
+              try:
+                  kickoff = datetime.strptime(local_date, '%m/%d/%Y %H:%M')
+                  kickoff = kickoff.replace(tzinfo=timezone.utc)
+              except ValueError:
+                  continue
+
+              estimated_full_time = kickoff + timedelta(hours=2)
+              scrape_time = estimated_full_time + timedelta(hours=1)
+
+              if scrape_time <= now < scrape_time + timedelta(hours=1):
+                  should_run = True
+                  print(
+                      f"Matched scrape window for finished game {game.get('id')} "
+                      f"scheduled from {local_date}"
+                  )
+                  break
+
+          with open('/tmp/should_run_output.txt', 'w', encoding='utf-8') as f:
+              f.write(f"should_run={'true' if should_run else 'false'}\n")
+          PY
+          cat /tmp/should_run_output.txt >> "$GITHUB_OUTPUT"
+
       - name: Scrape card data from Wikipedia
+        if: steps.should_run.outputs.should_run == 'true'
         run: |
           python scrape-wikipedia-cards.py
-      
+
       - name: Enrich card data with team/match info
+        if: steps.should_run.outputs.should_run == 'true'
         run: |
           python enrich-card-data.py
-      
+
       - name: Check for changes
+        if: steps.should_run.outputs.should_run == 'true'
         id: check_changes
         run: |
-          git diff --quiet data/worldcup-cards-enriched.csv || echo "changed=true" >> $GITHUB_OUTPUT
-      
+          git diff --quiet data/worldcup-cards.csv data/worldcup-cards-enriched.csv || echo "changed=true" >> $GITHUB_OUTPUT
+
       - name: Commit and push if changed
-        if: steps.check_changes.outputs.changed == 'true'
+        if: steps.should_run.outputs.should_run == 'true' && steps.check_changes.outputs.changed == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/worldcup-cards.csv data/worldcup-cards-enriched.csv
           git commit -m "🟨 Auto-update: Card data scraped from Wikipedia"
           git push
+
+      - name: No run needed
+        if: steps.should_run.outputs.should_run != 'true'
+        run: echo "No match reached the scrape window this hour."
 
 # Made with Bob

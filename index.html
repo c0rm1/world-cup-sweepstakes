@@ -5,24 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Cup Sweepstakes 2026</title>
     <link rel="icon" type="image/png" href="image copy.png">
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
     <div class="container">
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Header with Filters -->
+            <!-- Header -->
             <header class="top-bar">
                 <div>
                     <h1>World Cup Sweeps</h1>
                     <div id="lastUpdated" style="font-size: 12px; color: #888; margin-top: 4px;">Data last updated: Loading...</div>
                 </div>
                 <div class="filters">
-                    <div class="search-container">
-                        <input type="text" id="playerSearch" placeholder="Search player..." oninput="handlePlayerSearch()">
-                        <button id="clearSearch" class="clear-btn" onclick="clearPlayerSearch()" style="display: none;">×</button>
-                        <div id="playerDropdown" class="player-dropdown"></div>
-                    </div>
                     <button class="refresh-btn" onclick="manualRefresh()">Refresh</button>
                 </div>
             </header>
@@ -77,7 +72,7 @@
                                 <th>GF</th>
                                 <th>GA</th>
                                 <th>GD</th>
-                                <th>YC</th>
+                                <th title="Yellow|Red">Y|R</th>
                                 <th>Pts</th>
                             </tr>
                         </thead>
@@ -88,9 +83,10 @@
 
             <!-- LEADERBOARD PAGE -->
             <div id="leaderboard-page" class="page">
+                <div id="leaderboardStats"></div>
                 <div class="content-card">
                     <h2>Sweepstakes Leaderboard</h2>
-                    <p class="subtitle">Total owned teams league table</p>
+                    <p class="subtitle" id="leaderboardSubtitle">Sorted by Points</p>
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -104,6 +100,8 @@
                                 <th>W</th>
                                 <th>D</th>
                                 <th>L</th>
+                                <th>GD</th>
+                                <th title="Yellow | Red Cards">Y|R</th>
                                 <th>Pts</th>
                             </tr>
                         </thead>
@@ -149,6 +147,7 @@
         </aside>
     </div>
 
-    <script src="script.js"></script>
+    <script src="load-api-data.js?v=4"></script>
+    <script src="script.js?v=4"></script>
 </body>
 </html>
